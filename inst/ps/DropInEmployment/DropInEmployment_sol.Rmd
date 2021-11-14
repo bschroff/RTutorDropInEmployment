@@ -1,0 +1,2641 @@
+# Explaining the 2007-2009 Drop in Employment
+
+
+Author: Birgit Schroff
+
+
+#< ignore
+```{r "setup"}
+library(RTutor)
+# Adapt the working directory below and then run setup chunk in RStudio.
+setwd("C:/your/directory/")
+ps.name = "DropInEmployment"; sol.file = paste0(ps.name,"_sol.Rmd")
+# character vector of all packages you load in the problem set
+libs = c("dplyr", "ggplot2","glueformula", "lfe", "patchwork", "scales", "stargazer", "zoo")
+
+#name.rmd.chunks(sol.file)
+create.ps(sol.file=sol.file, ps.name=ps.name, libs=libs, addons = "quiz")
+
+# The following line directly shows the problem set 
+# in the browser
+show.ps(ps.name,launch.browser=TRUE,
+        auto.save.code=FALSE, sample.solution=FALSE)
+```
+#>
+
+Welcome to this interactive problem set which is the main part of my master’s thesis at the University of Ulm. It is based on the article "What Explains the 2007-2009 Drop in Employment?" by Atif Mian and Amir Sufi (2014). The problem set replicates their main findings using the statistics software R. The methods the authors use for data analysis are also presented. You can find the article, appendix, and data at <a href="https://amirsufi.net/chronology.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;amirsufi.net/chronology.html</a>.
+
+During the financial crisis from 2007 to 2009, employment in the United States fell dramatically. More than 8.6 million jobs were lost. In their paper, Mian and Sufi explore the question of why employment fell so sharply during the 2007-2009 recession. They focus on the housing net worth channel in their research. The housing net worth channel describes a decline in employment due to a significant reduction in housing net worth.
+
+The decline in housing net worth might reduce consumer demand. It is conceivable that lower consumer demand could lead to job losses. Mian, Rao, and Sufi (2013) discovered that in U.S. counties with a larger decrease in housing net worth between 2006 and 2009, spending decreased more sharply. Mian and Sufi examine the impact of the decline in housing net worth from 2006 to 2009 on employment at the county level.
+
+The problem set starts with an overview of the data. The housing net worth shock is derived and explained. Employment data is also presented and the terms non-tradable and tradable employment are defined. In exercise 2, we examine the impact of the decline in housing net worth between 2006 and 2009 on non-tradable employment between 2007 and 2009 at the county level. We begin with a simple linear regression model and then add possible confounders as control variables. We perform robustness checks in exercise 3. In exercises 4 and 5, we test whether alternative hypotheses explain the relationship between the change in housing net worth and non-tradable employment. In exercise 6, we explore whether the decline in employment in the non-tradable sector leads to adjustment mechanisms in the labor market. Exercise 7 summarizes the main results. 
+
+## Exercise Content
+
+
+1. Data overview
+  
+  1.1 Housing net worth shock
+  
+  1.2 Employment data
+  
+  1.3 Decline in employment between 2007 and 2009
+
+2. Housing net worth shock and non-tradable employment
+
+  2.1 Simple regression
+  
+  2.2 Weighted regressions and clustered standard errors
+  
+  2.3 Control variables
+  
+3. Robustness checks
+
+  3.1 Instrumental variable estimation
+
+  3.2 Further robustness checks
+  
+4. Business uncertainty hypothesis
+
+5. Credit supply hypothesis
+
+6. Adjustment mechanisms
+  
+7. Conclusion
+
+8. References 
+
+
+It is recommended to work through the exercises sequentially, as later exercises require knowledge from earlier ones. However, within an exercise you must solve the tasks in the given order. In the first code block of an exercise, you must press the `edit` button in order to enter the code. Press the `check` button to run the code and check whether the solution is correct. If you do not know how to solve the task or your solution is incorrect, you can press the `hint` button and get a tip. It is also possible to get a sample solution by pressing the `solution` button.
+
+There are different types of code blocks. Some require you to enter the entire code, some require you to enter part of the code, and in others, the code is given. The problem set includes several info boxes. They contain information on R packages, background information on econometric methods and descriptions of variables. You can open them by clicking on the heading. In small quizzes you can test your acquired knowledge. There are also awards that you get by solving certain tasks.
+
+## Exercise 1 -- Data overview
+
+In this exercise we will analyze the data set `countylevel.Rds`. It contains U.S. employment and wage data from 2007 to 2009, as well as information on housing values, income and demographics by county. The authors use the data set `miansufieconometrica_countylevel.dta`. I have renamed some of the variables and changed the file format to `.Rds`. You can download the original file on the following website <a href="https://amirsufi.net/chronology.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;amirsufi.net/chronology.html</a>. If you are interested in my adaptions, you can see the file `data_adaptions.R` in my GitHub repository at <a href="https://github.com/bschroff/RTutorDropInEmployment" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;github.com/bschroff/RTutorDropInEmployment</a>. Before you get an overview of the data, you must load it. As the data is stored in `.Rds` format, we use the command `readRDS` to import the data set and store it in a new variable. In general, we write `new_variable = readRDS("data_name")`.
+
+**Task:** Load the data set `countylevel.Rds` and assign it to variable `countylevel`.
+Press the `edit` button and enter the code. Press the `check` button to run the code and ascertain whether your solution is correct. To get help in solving the task, press the `hint` button. It is also possible to get a sample solution by clicking the `solution` button.  
+
+```{r "1 1"}
+
+#< task
+# Load the data and assign it to variable countylevel.
+#>
+countylevel = readRDS("countylevel.Rds")
+```
+
+
+#< award "Import data"
+Congratulations! You have earned your first award. Importing data is an important step before analyzing it. There will be more awards spread throughout this problem set. You can enter `awards()` in a code block and press the `check` button to see a list of your awards.
+#>
+
+To get a first impression of data, it is interesting to know how large the data set is. 
+
+**Task:** Use the command `dim(data_name)` to compute how many rows and columns make up the data set.
+
+```{r "1 2"}
+dim(countylevel)
+```
+
+The table has 3135 rows and 119 columns. Each row represents one county of the United States. For each county, the data set contains 119 variables. To get an overview of the information stored in the `countylevel` data set, the first rows of it are displayed.
+
+**Task:** Show the first six rows of data set `countylevel` using the command `head(data_name)`. 
+```{r "1 3"}
+head(countylevel)
+```
+
+`fips` is a unique identifier for each county. `hnw` describes the change in housing net worth from 2006 to 2009. This variable will be explained in the next exercise. The variable `elasticity` represents the housing supply elasticity. It will be discussed in exercise 3. `households` denotes the total number of households in the year 2000. All columns whose names begin with `"emp"` contain employment data. It will be presented in exercises 1.2 and 1.3. Variables including `"wage"` represent wage data. The data set also includes information about household income (`medhhinc`), housing value (`homevalmed`) and demographic patterns. For example, the demographic situation in a county is indicated by columns `white` (percentage of white people) and `pov` (poverty rate).
+
+#< award "Data overview"
+The next step after loading the data set is to get an overview of it.  For this purpose you are now familiar with the functions `dim()` and  `head()`.
+#>
+
+*This exercise refers to Mian & Sufi (2014), pp. 2199-2200.*
+
+## Exercise 1.1 -- Housing net worth shock
+
+An important variable for Mian and Sufi's analysis is the housing net worth shock. It describes the percentage change in net worth between 2006 and 2009 due to the housing shock. In this exercise, we will derive the variable and examine how housing net worth changed between 2006 and 2009. 
+
+Mian and Sufi define net worth as the total value of all households living in county $i$ at time $t$ as:
+
+$$NW^{i}_{t} = S^{i}_{t} + B^{i}_{t} + H^{i}_{t}  - D^{i}_{t}.$$
+
+- $S^{i}_{t}$ is the market value of stocks in county $i$ at time $t$.  
+- $B^{i}_{t}$ is the market value of bonds in county $i$ at time $t$.  
+- $H^{i}_{t}$ is the market value of housing in county $i$ at time $t$.  
+- $D^{i}_{t}$ is the market value of debt in county $i$ at time $t$.
+
+Mian and Sufi use IRS Statistics of Income (SOI) data to determine the market value of stocks and bonds, including deposits. The authors calculate the total market value of houses in a county in the year 2000 with 2000 Decennial Census Data. They multiply the number of homeowners by median home value. To determine the market value of housing in later years, the authors use the Core Logic zip code level house price index and an estimate of change in homeownership and population growth. The data used to measure debt was collected by Equifax Predictive Services.
+
+<p>
+
+#< quiz "Net worth"
+
+question: What is not included in the calculation of net worth?
+sc:
+    - Bank loans
+    - Financial assets
+    - Expected profits from a business idea*
+    - Housing value
+success: Great, your answer is correct! Expected profits from a business idea are realized in the future. Thus, they are not included in current net value. 
+failure: Your answer is not correct. Please try again.
+
+#>
+
+</p>
+
+The change in net worth between 2006 and 2009 is calculated by the following formula: 
+
+$$\Delta NW^{i}_{06-09} = \Delta \log p^{S}_{06-09} \cdot S^{i}_{2006} + \Delta \log p^{B}_{06-09} \cdot B^{i}_{2006} + \Delta \log p^{H,i}_{06-09} \cdot H^{i}_{2006}.$$
+
+$\Delta\log p_{06-09}$ specifies the logarithmic change in price indexes for stocks, bonds and housing. Mian and Sufi assume that quantities remain constant between 2006 and 2009 and that only prices change. The second assumption is that the nominal value of debt does not change over time. Consequently, debt has no impact on the change in net worth and does not occur in the equation. This is problematic because some debtors are unable to repay their debts. Their loans must be written off. The authors emphasize that their core results do not change when debt defaults are taken into account.
+
+The equation above computes the absolute change in net worth between 2006 and 2009. If you divide the result by the net worth of 2006, you get the percentage change:
+
+$$\frac{\Delta NW^{i}_{06-09}}{NW^{i}_{2006}} = \frac{\Delta \log p^{S}_{06-09} \cdot S^{i}_{2006}+\Delta \log p^{B}_{06-09} \cdot B^{i}_{2006}}{NW^{i}_{2006}}+\frac{\Delta \log p^{H,i}_{06-09} \cdot H^{i}_{2006}}{NW^{i}_{2006}}.$$
+
+The first term on the right-hand side of the formula shows the percentage change in net worth between 2006 and 2009 based on a change in financial assets. The second term on the right-hand side describes the percentage difference resulting from a change in housing value. The authors call the change in housing net worth between 2006 and 2009 housing net worth shock:
+
+$$\Delta HNW = \frac{\Delta \log p^{H,i}_{06-09} \cdot H^{i}_{2006}}{NW^{i}_{2006}}.$$
+
+The extent to which housing net worth declines in a county between 2006 and 2009 depends on how much house prices fall during this period and on the household indebtedness ratio in 2006. For explanation and derivation of the housing net worth shock, see Mian, Rao & Sufi (2013, pp. 1697-1699, 1703-1704) and  Mian & Sufi (2014, pp. 2200, 2205).
+
+Consider two fictitious counties, county A and county B, each with one household. The market value of housing in 2006 in both counties is \$400,000. In 2006, the combined market value of bonds and stocks is \$100,000 in both counties. The market value of debt in 2006 is \$100,000 in county A and \$200,000 in county B. In both counties, the logarithmic change in the housing price index between 2006 and 2009 is -0.1.
+
+<p>
+
+#< quiz "Housing net worth shock"
+
+parts:
+  - question: By how many percentage points does housing net worth decline between 2006 and 2009 in county A? Round the result to two decimal places. 
+    answer: 10
+    
+  - question: By how many percentage points does housing net worth decline between 2006 and 2009 in county B? Round the result to two decimal places.
+    answer: 13.33
+    
+success: Great, all answers are correct!
+failure: Not all answers correct. Try again.
+#>
+
+</p>
+
+Now we will analyze the housing net worth shock using the data. First, reload `countylevel.Rds`.
+
+**Task:** The code is already given. Just press the `edit` and then the `check` buttons. 
+
+```{r "1.1 1"}
+#< task
+countylevel = readRDS("countylevel.Rds")
+#>
+```
+
+**Task:** Use the function `select(data, column_names)` from the `dplyr` package to create a data frame `ch` consisting only of columns `fips`, `countyname`, `statename`, `hnw` and `households`. Show the first six rows of data set `ch` using the command `head(data_name)`. Fill in the missing parts of the code. 
+
+```{r "1.1 2"}
+#< task
+# Load the dplyr package.
+library(dplyr)
+#>
+#< fill_in
+
+# Select columns fips, countyname, statename,
+# hnw, households and assign it to variable ch.
+ch = select(countylevel,___, ___, ___, ___, ___)
+
+# Show first six rows of ch.
+head(___)
+#>
+
+# Select columns fips, countyname, statename,
+# hnw, households and assign it to variable ch.
+ch = select(countylevel, fips, countyname, statename, hnw, households)
+
+# Show first six rows of ch.
+head(ch)
+```
+
+In the data set, column `hnw` represents the housing net worth shock. The first six rows show that housing net worth in Autauga County increased by 0.4% between 2006 and 2009. In Baldwin County, housing net worth decreased by 5.5% during the same period. For the other counties, column `hnw` displays `NA`. `NA` is a placeholder for missing values. If the data set contains few values for the housing net worth shock, this could be problematic for our data analysis. Therefore, we calculate how much non missing data column `hnw` comprises. 
+
+**Task:** The code is already given. Just press the `check` button. 
+
+```{r "1.1 3"}
+#< task
+sum(!is.na(ch$hnw))
+#>
+```
+
+The housing net worth shock can be calculated for 944 of 3135 counties. Thus, column `hnw` contains data for only 30% of the counties. These regions, however, are very populous. About 80% of the American population live there. Mian and Sufi include only these counties in their analyses. We delete from data set `ch` all rows where `hnw` is missing. We use the `dplyr` command `filter(data, condition)`.
+
+**Task:** The code is already given. Just press the `check` button.
+
+```{r "1.1 4"}
+#< task
+ch = filter(ch, !is.na(hnw))
+#>
+```
+
+Now we calculate the average percentage decrease of housing net worth between 2006 and 2009.
+
+<p>
+
+#< quiz "Decline in housing net worth"
+question: Take a guess. How great was the decline in housing net worth between 2006 and 2009?
+sc:
+    - 4.9%
+    - 6.2%
+    - 9.5%*
+success: Great, your answer is correct!
+failure: Your answer is not correct. Try again.
+
+#>
+
+</p>
+
+**Task:** Compute the arithmetic mean of variable `hnw` contained in data set `ch` by using the command `mean()`. Address the variable by entering `ch$hnw`. 
+
+```{r "1.1 5" }
+mean(ch$hnw)
+```
+
+<p>
+
+#< quiz "Mean housing net worth shock"
+question: Why is it problematic to compute the arithmetic mean of the housing net worth shock?
+sc:
+    - The calculation does not include all counties.
+    - All counties are weighted equally.*
+success: Great, your answer is correct!
+failure: Your answer is not correct. Please try again.
+#>
+
+</p>
+
+It is true that not all counties are included in the mean. Counties for which `hnw` cannot be calculated are excluded from the calculation. This is desired and not a problem. What is problematic, is that the `mean()` function weights all counties equally. Counties with few households have the same impact on the average as counties with many households. We calculate the weighted mean in order to weight counties according to their number of households. The number of households in each county in 2000 is stored in the variable `households`. 
+
+**Task:** Use the function `weighted.mean(data, w)` to compute the weighted mean of the housing net worth shock. Address the variable by entering `ch$hnw` and set `w = ch$households`.
+
+```{r "1.1 6"}
+weighted.mean(ch$hnw, w = ch$households)
+```
+
+On average, housing net worth declined by 9.5% between 2006 and 2009. Now we can check, whether the decline was approximately the same across counties or whether there were significant differences. In order to do this, we can create a histogram with the `ggplot2` package.
+
+#< info "Package ggplot2"
+
+The `ggplot2` package offers many possibilities with which to generate graphics. It is based on the layered grammar of graphics. One creates a graph by defining components of the graph and combining them with a `+` sign. Here is an overview of functions needed in this problem set:
+
+`ggplot(data, aes(x = ..., y = ...))` generates a ggplot object. `data` defines which data set to use for the graph and `aes(x = ..., y = ...)` determines which variables are to be plotted.
+
+Many types of graphs can be created with the `ggplot2` package. For example, `geom_point()` makes a scatterplot, `geom_line()` draws a line plot and `geom_histogram()` produces a histogram.
+
+With the command `geom_smooth()` one can add various types of trend lines. For example, `method = lm` adds a linear regression line and `method = loess` plots a line using local regression fitting. 
+
+Functions `xlab()` and `ylab()` change axis labels. 
+
+`coord_cartesian(xlim = ..., ylim = ...)` zooms into a plot. Only part of the data is then displayed.
+
+The function `breaks_width(width, offset = 0)` from `scales` package can be used to change axis ticks. To specify x-axis ticks one can write `scale_x_continuous(breaks = breaks_width(...))` and with the command `scale_y_continuous(breaks = breaks_width(...))` set y-axis ticks. 
+
+The style of a graph can be altered by choosing a theme. For this problem set `theme_bw()` and `theme_classic()` are used. 
+
+For more information  and other functions from `ggplot2` package, see 
+<a href="https://cran.r-project.org/web/packages/ggplot2/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/ggplot2/index.html</a> and
+<a href="https://ggplot2-book.org/" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;ggplot2-book.org</a>.
+#>
+
+**Task:** Plot a histogram of the housing net worth shock (`hnw`). Fill in the missing parts of the code. 
+
+```{r "1.1 7"}
+#< task
+# Load the packages ggplot2 and scales.
+library(ggplot2)
+library(scales)
+#>
+
+#< fill_in
+
+# Specify parameters for data set and x-axis.
+ggplot(ch, aes(x = ___))+
+  # Add a histogram, set binwidth to 0.05,
+  # change color to "gray" and fill color to "SteelBlue".
+  geom_histogram(binwidth = ___, color = ___, fill = ___)+ 
+  # Set breaks_width to 0.1.
+  scale_x_continuous(breaks = breaks_width(___))+
+  # Label the x-axis. 
+  xlab("Change in housing net worth, 2006-2009")+
+  # Use theme_bw().
+  theme_bw()
+#>
+
+# Specify parameters for data set and x-axis.
+ggplot(ch, aes(x = hnw))+ 
+  # Add a histogram, set binwidth to 0.05,
+  # change color to "gray" and fill color to "SteelBlue".
+  geom_histogram(binwidth = 0.05, color = "gray", fill = "SteelBlue")+ 
+  # Set breaks_width to 0.1.
+  scale_x_continuous(breaks = breaks_width(0.1))+
+  # Label the x-axis. 
+  xlab("Change in housing net worth, 2006-2009")+
+  # Use theme_bw().
+  theme_bw()
+
+```
+
+#< award "First plot"
+You have created your first plot using the `ggplot2` package. Visualization is a helpful tool when interpreting data.
+#>
+
+You can see that in the vast majority of counties the housing net worth declined between 2006 and 2009. But in a few counties, the housing net worth rose even during the crisis. Many counties experienced a decline of up to 20%, with a few experiencing declines in excess of 40%. This shows that counties were affected to varying degrees. 
+
+*This exercise refers to Mian & Sufi (2014), pp. 2200-2201, 2204-2205.*
+
+## Exercise 1.2 -- Employment data
+
+Mian and Sufi analyze the consequences of the 2006-2009 decline in housing net worth on employment. For this purpose, they differentiate between tradable and non-tradable employment. The authors define tradable and non-tradable industries using two different approaches. In their analyses they use both methods and assess whether the results are robust to both definitions. In this exercise, both classification systems will be presented.
+
+The data set `countyindustrylevel.Rds` includes employment data by county and industry. Employment data are from 2007 to 2009 County Business Patterns (CBP) data set, which is created annually by the United States Census Bureau. You can view County Business Patterns (CBP) data sets from various years on this website: <a href="https://www.census.gov/programs-surveys/cbp/data.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;&#x77;&#x77;&#x77;&#x2E;census.gov/programs-surveys/cbp/data.html</a>. Mian and Sufi use four-digit NAICS codes to assign companies to industries. For detailed information about the North American Industry Classification System (NAICS), see <a href="https://www.census.gov/naics/" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;&#x77;&#x77;&#x77;&#x2E;census.gov/naics/</a>. 
+
+**Task:** Load `countyindustrylevel.Rds` and assign it to variable `countyindustrylevel`. To solve the task press the `edit` button and enter your code.  
+
+```{r "1.2 1"}
+#< task
+# Load the data and assign it to variable countyindustrylevel.
+#>
+countyindustrylevel = readRDS("countyindustrylevel.Rds")
+```
+
+To get an impression of the data, we show a few rows of data set `countyindustrylevel`. The function `sample_n(data, size)` from package `dplyr` returns a random sample from a data frame. The parameter `size` specifies the number of rows to be displayed.
+
+**Task:** Use the function `sample_n(data, size)` to show 10 random rows of data set `countyindustrylevel`.
+
+```{r "1.2 2"}
+sample_n(countyindustrylevel, 10)
+```
+
+The column `fips` contains an identification number for each county and the column `naics` contains the four-digit NAICS code for each industry. `hnw` denotes the housing net worth shock. The variable `elasticity ` describes the housing supply elasticity, which will be explained in exercise 3. `households` is the number of households in a county in the year 2000. Variables `CIemp_2007` and `CIemp_2009` denote employment by county and industry in 2007 and 2009.  `CIemp_0709` represents the change in employment by county and industry between 2007 and 2009. Column `Iemp_2007` contains employment data by industry in 2007. Variables `indcat`, `Iherf` and  `Ihcat` are important for classification into tradable and non-tradable industries.  They will be explained in the next two sections. `export_worker` describes the value of exports per worker in an industry. Columns `ntr_rwt`, `tr_rwt`, `ntr_geog`, `tr_geog` indicate whether an industry is classified as non-tradable or tradable according to the retail and world trade based or geographical concentration based classification. 
+
+### Retail and world trade based classification
+
+In this classification scheme, the 294 four-digit NAICS industries are assigned to four non-overlapping categories: tradable, non-tradable, construction, and other. Whether an industry is categorized as tradable depends on the level of imports and exports. If imports and exports are at least \$10,000 per worker or total exports and imports exceed \$500 million, the industry is classified as tradable. The retail sector and restaurants are categorized as non-tradable industries. The construction sector and industries related to real estate or land development make up the construction category. Industries that cannot be assigned to any one of these three categories are included in the category other. The retail and world trade based classification scheme categorizes 26 industries as non-tradable and 82 industries as tradable. 23 industries are assigned to the construction sector. Most industries, 163, belong to the category other.  
+
+Our goal is to show the top 20 tradable and non-tradable industries by employment share. For this task, only one entry per industry is required. To adjust the data set accordingly, use the `distinct(data, column_names, .keep_all = TRUE/FALSE)` function from package `dplyr`.  To keep all columns of data set `countyindustrylevel`, set the parameter `.keep_all` to `TRUE`.   
+
+**Task:** Create a new data set `industrylevel` with one entry per four-digit NAICS industry. Fill in the missing parts of the code. 
+
+```{r "1.2 3"}
+#< fill_in
+___ = ___(countyindustrylevel, naics, .keep_all = ___)
+#>
+industrylevel = distinct(countyindustrylevel, naics, .keep_all = TRUE)
+```
+
+In this section, only the columns `naics`, `industry`, `Iemp_2007`, `nontradable_strict`, `indcat`, `ntr_geog` and `tr_geog` of data set `industrylevel` are relevant. 
+
+**Task:** Select the columns `naics`, `industry`, `Iemp_2007`, `nontradable_strict`, `indcat`, `ntr_geog` and `tr_geog` from data set `industrylevel` using the command `select(data, column_names)`. Assign the new data frame to variable `il1` and show the first six of 294 rows. Fill in the missing parts of the code.
+
+```{r "1.2 4"}
+#< fill_in
+# Select columns naics, industry, Iemp_2007, nontradable_strict,
+# indcat, ntr_geog and tr_geog from data set industrylevel
+# and assign it to variable il1.
+il1 = select(___, ___, ___, ___, ___, ___, ___, ___)
+
+# Show first six rows of il1.
+head(___)
+#>
+# Select columns naics, industry, Iemp_2007, nontradable_strict,
+# indcat, ntr_geog and tr_geog from data set industrylevel
+# and assign it to variable il1.
+il1 = select(industrylevel, naics, industry, Iemp_2007, nontradable_strict,
+             indcat, ntr_geog, tr_geog)
+
+# Show first six rows of il1.
+head(il1)
+
+```
+
+The column `naics` contains the four-digit NAICS code and column `industry` specifies the name of the corresponding industry. The variable `Iemp_2007` represents the number of employees per industry in 2007. The variable `indcat` defines the category  an industry is assigned. Columns `ntr_geog` and `tr_geog` show whether an industry is classified as tradable or non-tradable according to the alternative classification scheme based on geographical concentration. The industry "metal ore mining" has 39,792 employees in 2007 and is categorized as tradable by the retail and world trade classification. The definition based on geographical concentration also classifies this industry as tradable. The industry “nonmetallic mineral mining and quarrying” is classified differently by the classification schemes. According to the retail and world trade definition, it is classified as tradable, while under the geographical classification it is classified as non-tradable.  
+
+Tradable and non-tradable industries shall be sorted by percentage share of total employment. By means of the `dplyr` function `mutate()`, we create the variable `Iemp_2007` which contains for each four-digit NAICS industry the share of total employment in 2007.
+
+**Task:** Fill in the missing parts of the code.
+```{r "1.2 5"}
+#< fill_in
+il1 = il1%>%
+  mutate(
+    # Calculate total employment by summing up Iemp_2007.
+    totalemp = sum(___),
+    # Calculate for each four-digit NAICS industry
+    # the percentage share of total employment in 2007.
+    Iempshare07 = (___/___) * 100
+  )
+
+# Show first 6 rows of il1.
+head(il1)
+#>
+il1 = il1%>%
+  mutate(
+    # Calculate total employment by summing up Iemp_2007.
+    totalemp = sum(Iemp_2007),
+    # Calculate for each four-digit NAICS industry
+    # the percentage share of total employment in 2007.
+    Iempshare07 = (Iemp_2007/totalemp) * 100
+  )
+
+# Show first 6 rows of il1.
+head(il1)
+```
+
+In 2007, 66,530 people work in the "logging" industry. This represents 0.05% of total employment. Of the six displayed industries, the industry "electric power generation transmission and distribution" has the most employees. 0.46% of all employees work in this field.
+
+<p>
+
+#< quiz "Non-tradable industries using retail and world trade based definition"
+question: Which of the following industries is one of the top 20 non-tradable industries according to the retail and world trade classification? Multiple answers are possible. 
+mc:
+    - Clothing stores* 
+    - Wood manufacturing
+    - Pharmaceutical and medicine manufacturing
+    - Full-service restaurants*
+success: Great, your answer is correct!
+failure: Your answer is not correct. Try again.
+
+#>
+
+</p>
+
+**Task:** List the top 20 non-tradable industries by employment share. Fill in the missing parts of the code.
+
+```{r "1.2 6"}
+#< fill_in
+# Show the top 20 non-tradable industries by employment share.
+
+il1%>%
+  # Generate a subset of il1 that only contains non-tradable data
+  # by filtering for indcat == "non-tradable". 
+  filter(___)%>%
+  # Sort industries in descending order by employment share.
+  arrange(desc(___))%>%
+  # Select columns naics, industry, indcat, ntr_geog and nontradable_strict. 
+  select (___, ___, ___, ___, ___)%>%
+  # Show the first 20 rows of the data set. 
+  slice_head(n = ___)
+#>
+# Show the top 20 non-tradable industries by employment share.
+
+il1%>%
+  # Generate a subset of il1 that only contains non-tradable data
+  # by filtering for indcat == "non-tradable". 
+  filter(indcat == "non-tradable")%>%
+  # Sort industries in descending order by employment share.
+  arrange(desc(Iempshare07))%>%
+  # Select columns naics, industry, indcat, ntr_geog and nontradable_strict.
+  select (naics, industry, indcat, ntr_geog, nontradable_strict)%>%
+  # Show the first 20 rows of the data set. 
+  slice_head(n = 20)
+
+```
+
+The classification scheme discussed in this section defines the retail sector and restaurants as non-tradable.  The list of the 20 largest non-tradable industries includes “full-service restaurants”, “grocery stores” and “clothing stores”. Most industries are also classified as non-tradable using the geographical concentration based definition.
+
+The list differs from table 1 in Mian and Sufi's paper. The authors state that they list the 20 largest industries by employment share.  But they use the column `nontradable_strict` to select 20 non-tradable industries and sort them by share of total employment.
+
+<p>
+
+#< quiz "Tradable industries using retail and world trade based definition"
+question: Take a guess. Which industry is the largest tradable industry using the retail and world trade based definition?
+
+sc:
+    - Semiconductor and other electronic manufacturing
+    - Plastics product manufacturing*
+    - Motion picture and video industries
+    - Gasoline stations
+success: Great, your answer is correct!
+failure: Your answer is not correct. Try again.
+
+#>
+
+</p>
+
+**Task:**  List the top 20 tradable industries by employment share. The code is already given. Just press the `check` button. 
+```{r "1.2 7"}
+#< task
+# Show top 20 tradable industries by employment share.
+
+il1%>%
+  # Generate a subset of il1 that only contains tradable data
+  # by filtering for indcat == "tradable". 
+  filter(indcat == "tradable")%>%
+  # Sort industries in descending order by employment share.
+  arrange(desc(Iempshare07))%>%
+  # Select columns naics, industry, indcat and tr_geog. 
+  select (naics, industry, indcat, tr_geog)%>%
+  # Show the first 20 rows of the data set. 
+  slice_head(n = 20)
+#>
+```
+
+The classification scheme used here defines industries with high imports and exports as tradable. The top 20 tradable industries include vehicle manufacturing, the chemical industry and pharmaceutical industry. Most industries are not classified as tradable according to the geographical concentration based definition. 
+
+### Geographical concentration based classification
+
+The second classification scheme assumes that tradable industries are more geographically concentrated than non-tradable industries. As non-tradable industries depend on local demand, they are spread across the country. Tradable industries require specialization and large production capacities as they produce for national and international markets. Thus, they should be more geographically concentrated than tradable industries. In order to measure geographical concentration, Mian and Sufi calculate a geographical Herfindahl index for each industry. It is based on the share of an industry’s employment that falls in each county. As defined by Rhoades (1993, pp. 188-189), the sum of squared shares equals the geographical Herfindahl index. A high geographical Herfindahl index indicates high geographical concentration, while a low geographical Herfindahl index indicates low geographical concentration. Mian and Sufi define the quartile with the highest values for the geographical concentration index as tradable, and the quartile with the lowest values as non-tradable. The geographical concentration based classification scheme defines 74 industries as non-tradable and 73 industries as tradable.  
+
+<p>
+
+#< quiz "Geographical Herfindahl index"
+question: Consider an industry with production in two counties. 80% of the employees work in county A and 20% work in county B. What is the geographical Herfindahl index of this industry?
+
+sc:
+    - 0.16 
+    - 0.36
+    - 0.68*
+success: Great, your answer is correct!
+failure: Your answer is not correct. Try again.
+
+#>
+
+</p>
+
+Our goal is to show the top 20 most and least geographically concentrated industries.
+
+**Task:** Select the columns `naics`, `industry`, `Iherf`, `Ihcat`, `ntr_rwt` and `tr_rwt` from data set `industrylevel` using the command `select(data, column_names)`. Assign the new data frame to variable `il2` and show the first six of 294 rows.
+
+```{r "1.2 8"}
+#< task
+# Select columns naics, industry, Iherf, Ihcat, ntr_rwt and tr_rwt
+# from data set industrylevel and assign it to variable il2.
+#>
+il2 = select(industrylevel, naics, industry, Iherf, Ihcat, ntr_rwt, tr_rwt)
+#< task
+
+# Show first six rows of il2.
+#>
+head(il2)
+
+```
+
+For each industry, the data set lists its' geographical Herfindahl index (`Iherf`) and quartile by geographical concentration (`Ihcat`). The number "1" in column `Ihcat` categorizes an industry as non-tradable and the number "4" defines an industry as tradable. Columns `ntr_rwt` and `tr_rwt` indicate whether an industry is classified as tradable or non-tradable according to the retail and world trade based definition.  
+
+<p>
+
+#< quiz "Non-tradable industries using definition based on geographical concentration"
+question: Which of the following industries is classified as non-tradable under both classification schemes?
+sc:
+    - Florists*
+    - General rental centers
+    - Cement and concrete manufacturing
+    - Tobacco manufacturing
+success: Great, your answer is correct!
+failure: Your answer is not correct. Try again.
+
+#>
+
+</p>
+
+**Task:** List the 20 industries with the lowest geographical concentration. 
+
+```{r "1.2 9"}
+#< fill_in
+# Show the 20 industries with the lowest geographical concentration.
+
+il2%>%
+  # Sort industries by geographical concentration.
+
+  # Select columns naics, industry, Iherf, Ihcat and ntr_rwt. 
+ 
+  # Show the first 20 rows of the data set. 
+
+#>
+# Show the 20 industries with the lowest geographical concentration.
+
+il2%>%
+  # Sort industries by geographical concentration. 
+  arrange(Iherf)%>%
+  # Select columns naics, industry, Iherf, Ihcat and ntr_rwt. 
+  select (naics, industry, Iherf, Ihcat, ntr_rwt)%>%
+  # Show the first 20 rows of the data set. 
+  slice_head(n = 20)
+
+```
+
+The definition that classifies restaurants and the retail sector as non-tradable categorizes 26 industries as non-tradable. The classification based on geographical concentration defines 74 industries as non-tradable. The list of the 20 least geographically concentrated industries therefore includes many industries that are not classified as non-tradable under the alternative classification scheme, e.g., rental centers, nursing care facilities and the logging industry. 
+
+<p>
+
+#< quiz "Tradable industries using definition based on geographical concentration"
+
+question: Take a guess. Which industry has the highest Herfindahl index?
+sc:
+    - Internet service providers 
+    - Grocery stores
+    - Securities and commodity exchanges*
+    - Basic chemical manufacturing
+success: Great, your answer is correct!
+failure: Your answer is not correct. Try again.
+
+#>
+
+</p>
+
+**Task:** List the 20 industries with the highest geographical concentration. The code is already given. Just press the `check` button. 
+
+
+```{r "1.2 10"}
+#< task
+# Show the 20 industries with the highest geographical concentration.
+
+il2%>%
+  # Sort industries in descending order by geographical concentration.
+  arrange(desc(Iherf))%>%
+  # Select columns naics, industry, Iherf, Ihcat, tr_rwt. 
+  select (naics, industry, Iherf, Ihcat, tr_rwt)%>%
+  # Show the first 20 rows of the data set. 
+  slice_head(n = 20)
+#>
+```
+
+The classification schemes define a similar number of industries as tradable. If the retail and world trade classification is used, 82 industries are classified as tradable, while 73 industries are classified as tradable according to the classification scheme based on geographical concentration. The retail and world trade based definition classifies industries with high imports and exports as tradable, e.g. plastics product manufacturing, converted paper product manufacturing and pharmaceutical and medicine manufacturing. Securities and commodity exchanges, motion picture and video industries and amusement parks are geographically concentrated and are therefore classified as tradable by the classification scheme based on geographical concentration.
+
+#< award "Dplyr commands"
+You have used various `dplyr` commands in this chapter. Functions from `dplyr` package are useful to modifying data as you need it. For more information see <a href="https://cran.r-project.org/web/packages/dplyr/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/dplyr/index.html</a>.
+#>
+
+*This exercise refers to Mian & Sufi (2014), pp. 2200-2203.*
+
+## Exercise 1.3 -- Decline in employment between 2007 and 2009
+
+In this exercise, we will analyze, how employment developed during the recession from 2007 to 2009. First, reload the data set `countylevel.Rds`.
+
+**Task:** The code is already given. Just press the `edit` and then the `check` buttons.
+
+```{r "1.3 1"}
+#< task
+countylevel = readRDS("countylevel.Rds")
+#>
+```
+
+Relevant variables for the next calculations are `fips`, `countyname`, `statename`, `hnw`, `households`, `emp_0709`, `ntremp_rwt`, `tremp_rwt`, `ntremp_geog` and `tremp_geog`. We create a data frame containing only these variables. 
+
+**Task:** The code is already given. Just press the `check` button. 
+
+```{r "1.3 2"}
+#< task
+ce = select(countylevel, fips, hnw, households, countyname, statename,
+            emp_0709, ntremp_rwt, tremp_rwt, ntremp_geog, tremp_geog)
+
+head(ce)
+#>
+```
+
+The column `emp_0709` contains employment growth per county between 2007 and 2009.  Variable `ntremp_rwt` denotes non-tradable employment growth and `tremp_rwt` tradable employment growth per county between 2007 and 2009. The classification scheme based on retail and world trade is used for these two variables. The alternative definition based on geographical concentration is used for columns `ntremp_geog` and `tremp_geog`. Data in column `ntremp_geog` represents growth in non-tradable employment, while data in column `tremp_geog` represents growth in tradable employment between 2007 and 2009. In Baldwin County, for example, total employment decreased by 8.3% between 2007 and 2009. According to the retail and world trade based classification non-tradable employment declined by 4.6% and tradable employment rose by 8.1%. When using geographical concentration based classification, non-tradable employment declined by 7.5% and tradable employment rose by 22%. We calculate the average changes in total employment, non-tradable employment and tradable employment between 2007 and 2009.
+
+<p>
+
+#< quiz "Decline in total employment"
+question: Take a guess. How great was the decline in total employment between 2007 and 2009?
+sc:
+    - 3.4% 
+    - 5.3%*
+    - 8.6%
+success: Great, your answer is correct!
+failure: Your answer is not correct. Try again.
+
+#>
+
+#< quiz "Decline in non-tradable and tradable employment"
+question: What do you think? Did tradable or non-tradable employment decline more between 2007 and 2009?
+sc:
+    - Non-tradable employment declined more than tradable employment between 2007 and 2009. 
+    - Tradable employment declined more than non-tradable employment between 2007 and 2009.*
+    - It depends on which classification scheme you apply.
+success: Great, your answer is correct!
+failure: Your answer is not correct. Try again.
+
+#>
+
+
+
+**Task:** Compute the weighted arithmetic mean of variables `emp_0709`, `ntremp_rwt`, `ntremp_geog`, `tremp_rwt` and  `tremp_geog`. Include in your calculation only counties where the variable `hnw` is given. Weight counties by the number of households in 2000 by setting `w = ce$households`.  The code to calculate the weighted mean of variable `emp_0709` is given. Proceed in the same way for the other variables.
+
+```{r "1.3 3"}
+#< task
+# Include only counties where the variable hnw is given.
+ce = filter(ce, !is.na(hnw))
+
+# Average change in total employment between 2007 and 2009:
+weighted.mean(ce$emp_0709, w = ce$households)
+
+#>
+#< fill_in 
+# # Average change in non-tradable employment between 2007 and 2009:
+# # 1) Retail and world trade based definition:
+
+# # 2) Definition based on geographical concentration:
+
+	        
+# # Average change in tradable employment between 2007 and 2009: 
+# # 1) Retail and world trade based definition:
+
+# # 2) Definition based on geographical concentration:
+
+#>
+# Average change in non-tradable employment between 2007 and 2009:
+# 1) Retail and world trade based definition:
+weighted.mean(ce$ntremp_rwt, w = ce$households)
+# 2) Definition based on geographical concentration:
+weighted.mean(ce$ntremp_geog, w = ce$households)
+	        
+# Average change in tradable employment between 2007 and 2009: 
+# 1) Retail and world trade based definition:
+weighted.mean(ce$tremp_rwt, w = ce$households)
+# 2) Definition based on geographical concentration:
+weighted.mean(ce$tremp_geog, w = ce$households)
+```
+
+Employment declined by 5.3% between 2007 and 2009. For both classification methods, non-tradable employment decreased by an average of 4%. For decline in tradable employment, the classification methods provide slightly different results. According to the retail and world trade based definition, tradable employment dropped by 11.6% between 2007 and 2009. With the definition based on geographical concentration, a decline of 8.3% is calculated over this period. Although the two classification schemes categorize different industries as tradable and non-tradable, the average decline in employment is similar under both definitions. 
+
+Now we check whether the decline in employment was approximately the same across counties or whether there were significant differences. For this purpose, we create histograms using the `ggplot2` package. As in the previous task, we include only counties for which the housing net worth shock (`hnw`) can be calculated. To compare the different types of employment, we adjust the axes manually. We limit the x-axis to -0.5 to 0.5 and the y-axis to 0 to 400. To show multiple graphs, we use the `patchwork` package.
+
+**Task:** The code is already given. Just press the `check` button.
+
+```{r "1.3 4", fig.height = 7.5, fig.width = 10.5}
+#< task
+# Load the patchwork package.
+library(patchwork)
+
+# 1) Plot a histogram of variable emp_0709 and store it in variable h1. 
+h1 = ggplot(ce, aes(emp_0709))+
+  geom_histogram(binwidth = 0.05, color = "gray", fill = "ForestGreen")+
+  coord_cartesian(xlim = c(-0.5, 0.5), ylim = c(0, 400))+
+  scale_x_continuous(breaks = breaks_width(0.1))+
+  xlab("Total employment growth, 2007-2009")+
+  theme_bw()
+
+# 2) Plot a histogram of variable ntremp_rwt and store it in variable h2. 
+h2 = ggplot(ce, aes(ntremp_rwt))+
+  geom_histogram(binwidth = 0.05, color = "gray", fill = "SteelBlue")+
+  coord_cartesian(xlim = c(-0.5, 0.5), ylim = c(0, 400))+
+  scale_x_continuous(breaks = breaks_width(0.1))+ 
+  xlab("Non-tradable employment growth, 2007-2009 
+       (restaurants and retail)")+
+  theme_bw()
+
+# 3) Plot a histogram of variable ntremp_geog and store it in variable h3. 
+h3 = ggplot(ce, aes(ntremp_geog))+
+  geom_histogram(binwidth = 0.05, color = "gray", fill = "CadetBlue")+
+  coord_cartesian(xlim = c(-0.5, 0.5), ylim = c(0, 400))+
+  scale_x_continuous(breaks = breaks_width(0.1))+
+  xlab("Non-tradable employment growth, 2007-2009 
+       (based on low geographical concentration)")+
+  theme_bw()
+
+# 4) Plot a histogram of variable tremp_rwt and store it in variable h4. 
+h4 = ggplot(ce, aes(tremp_rwt))+
+  geom_histogram(binwidth = 0.05, color = "gray", fill = "MediumPurple")+
+  coord_cartesian(xlim = c(-0.5, 0.5), ylim = c(0, 400))+
+  scale_x_continuous(breaks = breaks_width(0.1))+ 
+  xlab("Tradable employment growth, 2007-2009  
+       (world trade based)")+
+  theme_bw()
+  
+# 5) Plot a histogram of variable tremp_geog and store it in variable h5. 
+h5 = ggplot(ce, aes(tremp_geog))+
+  geom_histogram(binwidth = 0.05, color = "gray", fill = "Orchid")+
+  coord_cartesian(xlim = c(-0.5, 0.5), ylim = c(0, 400))+
+  scale_x_continuous(breaks = breaks_width(0.1))+
+  xlab("Tradable employment growth, 2007-2009 
+       (based on high geographical concentration)")+
+  theme_bw()
+
+# Show all histograms. 
+library(patchwork)
+
+ h1 /
+(h2 | h3) /
+(h4 | h5)
+#>
+
+```
+
+In most counties, total employment declined by up to 20%. In some counties, however, total employment increased during the 2007-2009 recession. The two histograms on non-tradable employment look similar. According to both definitions, non-tradable employment decreased by up to 20% in most counties. Compared to total employment, non-tradable employment increased in more counties. In the case of tradable employment, the histograms differ. According to the world trade based definition, tradable employment declined more than according to the definition based on geographical concentration. Data on tradable employment is more dispersed than that on non-tradable employment. Tradable employment decreased by more than 30% in some counties. In a few counties it increased by more than 20%. 
+
+*This exercise refers to Mian & Sufi (2014), pp. 2204-2205.*
+
+## Exercise 2 -- Housing net worth shock and non-tradable employment
+
+Mian and Sufi investigate, at the county level, how the 2006-2009 decline in housing net worth affected employment. Mian, Rao and Sufi (2013) discovered that in counties with a greater decline in housing net worth, consumption dropped sharply. As the decline in spending in one region can impact employment globally, it is complicated to measure the effect of a local decline in housing net worth on employment. The authors solve this problem by estimating the impact of the housing net worth shock on non-tradable employment. The non-tradable sector relies heavily on local demand. In exercise 2.1, we will estimate the relationship between the housing net worth shock and non-tradable employment using simple linear regression models. We will weight regressions and cluster standard errors in exercise 2.2 and in exercise 2.3 we will add control variables to regressions. 
+
+*This exercise refers to Mian & Sufi (2014), p. 2205.*
+
+## Exercise 2.1 -- Simple regression
+
+### Simple linear regression model
+
+We begin the regression analysis with a simple linear regression model, meaning that the model includes one explanatory variable. We want to ascertain whether a decline in housing net worth has an impact on non-tradable employment. Since we want to use both definitions of non-tradable employment, we consider the following two regression equations: 
+
+$$ \begin{eqnarray} 
+ntremp\_rwt_i = \alpha_0 + \alpha_1 \cdot hnw_i + \varepsilon_i\\\
+ntremp\_geog_i = \beta_0 + \beta_1 \cdot hnw_i + u_i.
+\end{eqnarray} $$
+
+- $hnw_i$ is the housing net worth shock in county $i$. It describes the percentage change in housing net worth between 2006 and 2009.
+- $ntremp\_rwt_i$ is the logarithmic change in  non-tradable employment in county $i$ between 2007 and 2009. Restaurants and the retail sector are defined as non-tradable.
+- $ntremp\_geog_i$ is the logarithmic change in  non-tradable employment in county $i$ between 2007 and 2009. Industries with low geographical concentration are defined as non-tradable. 
+- $\alpha_1$ resp. $\beta_1$ can be interpreted as follows: If housing net worth declines by one percentage point, non-tradable employment changes by approximately $-\alpha_1$ resp. $-\beta_1$ percentage points. 
+
+We will use the ordinary least squares (OLS)  method to estimate the regression models. In the info box you will find an introduction to this estimation method.
+
+#< info "Ordinary least squares estimation"
+
+Consider the following regression model: 
+
+$$ y = \beta X + \varepsilon. $$
+
+$y$ is the dependent variable. $X = x_1, \ldots, x_k$ are the independent variables. $\varepsilon$ is called error term or disturbance term. It describes all unobserved factors, which influence the independent variable.
+
+The OLS method estimates the parameter vector $\beta$ by minimizing the sum of squared residuals:
+
+$$ \hat{\beta} = \text{arg min} \sum_{i=1}^n \hat{\varepsilon}_i^2 = \text{arg min} \sum_{i=1}^n (y_i - \hat{y}_i)^2 = (X'X)^{-1}X'y.$$
+
+The OLS estimator is the best unbiased linear estimator (BLUE), if the following assumptions are fulfilled:
+
+1. The dependent variable is a linear function of independent variables and a disturbance term $(y = \beta X + \varepsilon)$.  
+2. The expected value of the disturbance term is zero $(\mathbb{E}(\varepsilon_i) = 0 \; \forall i)$.  
+3. a) Homoskedasticity: Disturbances have uniform variance $(Var(\varepsilon_i) = \sigma^2 \; \forall i)$.  
+b) No autocorrelation: Disturbances are uncorrelated $(Cov(\varepsilon_i, \varepsilon_j) = 0 \; \forall i \neq j)$.  
+4. Observations on independent variables can be considered fixed in repeated samples.  
+5. There are more observations than independent variables. In addition, there are no exact linear relationships between independent variables.  
+
+The theory can be found in Wooldridge (2020, pp. 760-761), Kennedy (2008, pp.41-42) and Auer & Rottmann (2015, p. 460).
+
+#>
+
+Before we can begin the analysis, we reload `countylevel.Rds`. 
+
+**Task:** The code is already given. Just press the `edit` and then the `check` buttons.
+
+```{r "2.1 1"}
+#< task
+countylevel = readRDS("countylevel.Rds")
+#>
+```
+
+In this problem set we will use the function `felm()` from the `lfe` package to perform regressions. How to estimate linear regression models with `felm()`, is explained in the info box. 
+
+#< info "Linear regressions with felm()" 
+The `felm()` function from the `lfe` package can be used to run regressions. In order to regress `y` on `x1` and `x2` if all variables are stored in data set `dat`, the following command can be used: 
+
+```{r eval = FALSE}
+# Load the lfe package.
+library(lfe)
+
+# Regress y on x1 and x2.
+felm(y ~ x1 + x2, data = dat)
+```
+
+`felm()` provides a lot of features for regression analysis. One can weight regressions and cluster standard errors, for example. Some of the available options will be used in this problem set. More information on the `felm()` function can be found here: <a href="https://cran.r-project.org/web/packages/lfe/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/lfe/index.html</a>.
+#>
+
+**Task**: Run two regressions with `ntremp_rwt` and `ntremp_geog` as independent variables and `hnw` as dependent variable. All relevant variables are stored in the data set `countylevel`. Save the results in `reg1` and `reg2`.
+
+```{r "2.1 2"}
+#< task
+# Run regressions using the function felm().
+#>
+reg1 = felm(ntremp_rwt ~ hnw, data = countylevel)
+reg2 = felm(ntremp_geog ~ hnw, data = countylevel)
+```
+
+#< award "First regression"
+Nice! You have run your first regressions using the `felm()` function.
+#>
+
+To communicate regression results clearly we use the `stargazer()` function from the package of the same name.
+
+<p>
+
+**Task:** The code is already given. Just press the `check` button.
+
+```{r "2.1 3", results='asis'}
+#< task
+# Load the stargazer package.
+library(stargazer)
+
+# Show regression output with stargazer().
+stargazer(
+  reg1, reg2,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE
+)
+#>
+```
+
+</p>
+
+The estimate for $\alpha_0$ is -0.012 and for $\beta_0$ -0.020. The parameters $\alpha_1$ and $\beta_1$ are estimated to 0.252 resp. 0.245. Both $\hat{\alpha_1}$ and $\hat{\beta_1}$  are positive. This implies there is a positive relationship between the housing net worth shock and non-tradable employment at the county level. If we apply the definition that classifies restaurants and the retail sector as non-tradable, the coefficient on the housing net worth shock is 0.252. This can be interpreted as follows: A decline in housing net worth of one percentage point in a particular county is associated with an approximate 0.252 percentage point decline in non-tradable employment in that county. $\hat{\beta_1}$ has a value of 0.245. According to the model, non-tradable employment based on geographical concentration in a county decreases by about 0.245 percentage points when housing net worth in that county decreases by one percentage point.
+
+<p>
+
+#< quiz "Regression output"
+
+question: If housing net worth in a county declined by 5% between 2006 and 2009, the regression model predicts that non-tradable employment would decline by approximately...
+sc:
+    - ... 0.63 percentage points between 2007 and 2009. 
+    - ... 1.26 percentage points between 2007 and 2009.*
+    - ... 2.52 percentage points between 2007 and 2009.
+success: Great, your answer is correct!
+failure: Your answer is not correct. Please try again.
+
+#>
+
+</p>
+
+The p-values of $\hat{\alpha_1}$ and $\hat{\beta_1}$ are both less than 0.01. The variable `hnw` is significant at the 1% level. This means, if the true correlation between the housing net worth shock and non-tradable employment was zero, the probability that we would find an estimator for $\alpha_1$ that is 0.252 or higher would be less than one percent. This applies accordingly to $\beta_1$. You can find more information on p-values and significance levels in Wooldridge (2020, pp. 130-132). $R^2$ specifies the extent to which the variation in the dependent variable can be explained by independent variables. The measure can take values between zero and one. $R^2$ close to one means that independent variables explain a large proportion of the variance of the dependent variable. Whether or not we add a variable to the regression model should not depend upon whether it increases $R^2$. We add variables to the regression model for better measurement of the causal effect between the housing net worth shock and non-tradable employment. For information to $R^2$, see Stock & Watson (2019, pp. 223-224). 
+
+### Graphical analysis
+
+We visualize the relationship between the housing net worth shock and non-tradable employment in a graph. For clarity, we plot a subset of `countylevel` data set. In our graphical analysis, we include  counties with more than 50,000 households. We consider counties with a decrease in housing net worth of less than 30% and an absolute change in non-tradable employment of less than 20%. We create a scatter plot with the function `geom_point()`. With the `geom_smooth()` function we add two trend lines. We set the parameter `method = "lm"` to plot a regression line. The setting `method = "loess"` adds a line using local regression fitting.
+
+**Task**: Fill in the missing parts of the code.  
+
+```{r "2.1 4", fig.height = 5, fig.width = 10}
+#< fill_in
+# In the first plot, restaurants and the retail sector
+# are defined as non-tradable. 
+p1 = ggplot(subset(countylevel, households>___ & hnw>___ & abs(ntremp_rwt)<___),
+            aes(x = ___, y = ___))+
+  ___+
+  ___(method = "lm", se = FALSE, color = "IndianRed")+
+  # The parameter span is set to 0.8, because for 
+  # the stata function lowess the default value is bwidth(0.8). 
+  # see Stata 17 Base Reference Manual (2021), pp. 1331-1332.
+  ___(method  = "loess", se = FALSE, span = 0.8, size = 0.5,
+      color = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Non-tradable employment growth, 2007Q1-2009Q1
+       (restaurants & retail)")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-0.2, 0.2))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.1))+
+  theme_classic()
+
+# In the second plot, industries with low geographical concentration
+# are defined as non-tradable.
+p2 = ggplot(subset(countylevel, households>___ & hnw>___ & 
+                   abs(ntremp_geog<___ )), aes(x = ___, y = ___))+ 
+  ____+
+  ___(method = "lm", se = FALSE, color = "IndianRed")+
+  ___(method  = "loess", se = FALSE, span = 0.8, size = 0.5,
+      color = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Non-tradable employment growth, 2007Q1-2009Q1
+       (based on low geographical concentration)")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-0.2, 0.2))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.1))+
+  theme_classic()
+
+# Show p1 and p2 side by side
+(p1 | p2)
+#>
+# In the first plot, restaurants and the retail sector
+# are defined as non-tradable. 
+p1 = ggplot(subset(countylevel, households>50000 & hnw>-0.3 & abs(ntremp_rwt<0.2)),
+            aes(x = hnw, y = ntremp_rwt))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, color = "IndianRed")+
+  # The parameter span is set to 0.8, because for
+  # the stata function lowess the default value is bwidth(0.8). 
+  # see Stata 17 Base Reference Manual (2021), pp. 1331-1332.
+  geom_smooth(method  = "loess", se = FALSE, span = 0.8, size = 0.5,
+              color = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Non-tradable employment growth, 2007Q1-2009Q1
+       (restaurants & retail)")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-0.2, 0.2))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.1))+
+  theme_classic()
+
+# In the second plot, industries with low geographical concentration
+# are defined as non-tradable.
+p2 = ggplot(subset(countylevel,
+                   households>50000 & hnw>-0.3 & abs(ntremp_geog<0.2)),
+            aes(x = hnw, y = ntremp_geog))+ 
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, color = "IndianRed")+
+  geom_smooth(method  = "loess", se = FALSE, span = 0.8, size = 0.5,
+              color = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Non-tradable employment growth, 2007Q1-2009Q1
+       (based on low geographical concentration)")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-0.2, 0.2))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.1))+
+  theme_classic()
+
+# Show p1 and p2 side by side
+(p1 | p2)
+```
+
+#< award "Advanced plot"
+Great! You combined a scatter plot with two different types of trend lines. With the `ggplot2` package you can plot different types of graphs in one plot. 
+#>
+
+In the graph on the left, restaurants and the retail sector are defined as non-tradable. In the graph on the right, industries with low geographical concentration are classified as non-tradable. The different definitions of non-tradable employment provide similar results. There is a positive relationship between the housing net worth shock and non-tradable employment. Counties with a greater decline in housing net worth, experienced a greater decline in non-tradable employment.
+
+In the next exercise, we will modify the regression models. We will weight regressions and cluster standard errors.
+
+
+*This exercise refers to Mian & Sufi (2014), pp. 2205-2208.*
+
+## Exercise 2.2 -- Weighted regressions and clustered standard errors
+
+### Weighted regressions
+
+In exercise 2.1, we used the OLS method to estimate regression models. The OLS estimator weights all observations equally. This means that regions with fewer households are considered just as strongly as regions with many households. Therefore, Mian and Sufi weight regressions by the number of households in a county. Another reason for weighting regressions is to deal with heteroskedasticity and to obtain a more efficient estimator. See the info boxes for details. 
+
+#< info "Homoskedasticity and heteroskedasticity"
+Homoskedasticity means that all of the error terms in a regression model have the same variance. Heteroskedasticity exists when the error terms do not have the same variance (see Kennedy (2008), p. 41; Verbeek (2012), p. 15). 
+#>
+
+#< info "Weighted regressions and heteroskedasticity"
+Consider the following simple linear regression model: 
+
+$$ ntremp\_rwt_i = \alpha_0 + \alpha_1 \cdot hnw_i + \varepsilon_i. $$
+
+The data on the housing net worth shock refers to counties. As counties consist of different numbers of households, we use data that represents a cross-section of group averages with different group sizes. If we assume that at the household level the observations are independent and error terms are homoskedastic, following Verbeek (2012, p. 101), the variance of the disturbance term of the upper regression equation is given by:
+
+$$ Var(\varepsilon_i|hnw_i) = \frac{\sigma^2} {n_i}, $$
+
+where $n_i$ is the number of households in county $i$. Since disturbances do not all have the same variance, the assumption that error terms are homoskedastic is violated and heteroskedasticity is present (cf. Kennedy (2008), p.41). In this case, the OLS estimator is still unbiased and consistent, but not efficient (cf. Wooldridge (2020), pp. 262-263; Verbeek (2012), p. 94). One possibility to correct for heteroskedasticity is weighted least squares (WLS). The regression equation is multiplied by $\sqrt {n_i}$:
+
+$$ \sqrt {n_i} \cdot ntremp\_rwt_i = \sqrt {n_i} \cdot \alpha_0 + \sqrt {n_i} \cdot \alpha_1 \cdot hnw_i + \sqrt {n_i} \cdot \varepsilon_i. $$
+
+The weighted least squares estimator minimizes the weighted sum of squared residuals:
+
+$$ \sum_{i=1}^n  n_i (ntremp\_rwt_i-\widehat{ntremp\_rwt_i})^2.$$
+
+In contrast to the OLS estimator, the WLS estimator does not weight all counties equally, but gives more weight to counties with many households. More detailed information on WLS can be found in Wooldridge (2020, chapter 8-4).
+#>
+
+**Task:** Before we start the analysis, we reload `countylevel.Rds`. The code is already given. Just press the `edit` and then the `check` buttons.
+
+```{r "2.2 1"}
+#< task
+countylevel = readRDS("countylevel.Rds")
+#>
+```
+
+#< info "Weighted linear regressions with felm()" 
+The `felm()` function from the `lfe` package allows regressions to be estimated by weighted least squares (WLS). If you want to regress `y` on `x1` and `x2` and weight the regression by variable `wgt`, the following code is used: 
+
+```{r eval = FALSE}
+felm(y ~ x1 + x2, weights = dat$wgt, data = dat)
+```
+
+For more information on the `felm()` function check <a href="https://cran.r-project.org/web/packages/lfe/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/lfe/index.html</a>.
+#>
+
+**Task**: Use the `felm()` function to run weighted regressions. The dependent variables are `ntremp_rwt` and `ntremp_geog` and the independent variable is `hnw`. Weight both regressions by variable `households` and save the results in `reg_wgt1` and `reg_wgt2`. Fill in the missing parts of the code.
+
+```{r "2.2 2"}
+#< fill_in
+# Run weighted regressions.
+reg_wgt1 = felm(___ ~ ___,
+                weights = ___, data = countylevel)
+reg_wgt2 = felm(___ ~ ___,
+                weights = ___, data = countylevel)
+#>
+# Run weighted regressions.
+reg_wgt1 = felm(ntremp_rwt ~ hnw,
+                weights = countylevel$households, data = countylevel)
+reg_wgt2 = felm(ntremp_geog ~ hnw,
+                weights = countylevel$households, data = countylevel)
+```
+
+#< award "Weighted regressions"
+Well done! You now know how to weight regressions using `felm()` from the `lfe()` package.
+#>
+
+We want to analyze the difference between regressions estimated by OLS and WLS. For this purpose, we run unweighted regressions from exercise 2.1 again, and compare them with weighted regressions. To display the results clearly, we use the `stargazer()` function. 
+
+<p>
+
+**Task**: The code is already given. Just press the `check` button. 
+
+
+```{r "2.2 3", results='asis'}
+#< task
+# Perform unweighted regressions.
+reg_ols1 = felm(ntremp_rwt ~ hnw, data = countylevel)
+reg_ols2 = felm(ntremp_geog ~ hnw, data = countylevel)
+
+# Compare unweighted and weighted regressions.
+stargazer(
+  reg_ols1, reg_wgt1, reg_ols2, reg_wgt2,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  add.lines = list (c("Weighted?", "No", "Yes", "No", "Yes"))
+)
+          
+#>
+```
+
+</p>
+
+The estimated effect of the housing net worth shock on non-tradable employment is smaller for weighted regressions. When we use WLS, the coefficient on the housing net worth shock decreases from 0.252 to 0.190 resp. from 0.245 to 0.199. The correlation between the change in housing net worth and non-tradable employment remains significant at the 1% level. 
+
+### Clustered standard errors
+
+We assume data consists of several groups, called clusters. Within clusters, error terms are correlated, across clusters they are not correlated. If we ignore this fact in the regression analysis, we run the risk of underestimating the standard errors. To correct for this, Mian and Sufi cluster standard errors at state level. Counties located in the same state are subject to the same labor market laws. These political conditions influence companies' actions. Thus, counties within a state are not independent. Clustering the data by state also allows for geographical correlation across counties within a state. A decline in housing net worth in one county may not only affect non-tradable employment in that county, but also non-tradable employment in nearby counties.
+
+#< info "Clustered standard errors with felm()" 
+The function `felm()` function can be used to cluster standard errors. In order to use weighted least squares estimation and cluster standard errors by variable `clust`, the following command can be entered:
+
+```{r eval = FALSE}
+felm(y ~ x1 + x2|0|0|clust, weights = dat$wgt, data = dat)
+```
+For more detailed information see <a href="https://cran.r-project.org/web/packages/lfe/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/lfe/index.html</a>.
+#>
+
+**Task**: Perform two regressions. Regress `ntremp_rwt` and `ntremp_geog` on `hnw`. Weight regressions by `households` and cluster standard errors by `statename`. Store the results in `reg_clust1` and `reg_clust2`. Compare weighted regressions with and without clustered standard errors in one table using the `stargazer()` function. Fill in the missing parts of the code. 
+
+```{r "2.2 4", results='asis'}
+#< fill_in
+# Run weighted regressions with clustered standard errors.
+reg_clust1 = felm(___ ~ ___|0|0|___,
+                  weights = ___, data = countylevel)
+reg_clust2 = felm(___ ~ ___|0|0|___,
+                  weights = ___, data = countylevel)
+
+# Compare weighted regressions with and without clustered standard errors.
+stargazer(
+  reg_wgt1, reg_clust1, reg_wgt2, reg_clust2,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  add.lines = list (c("Weighted?", "Yes", "Yes", "Yes", "Yes"),
+                    c("Clustered?", "No", "Yes", "No", "Yes"))
+)
+#>
+# Run weighted regressions with clustered standard errors.
+reg_clust1 = felm(ntremp_rwt ~ hnw|0|0|statename,
+                  weights = countylevel$households, data = countylevel)
+reg_clust2 = felm(ntremp_geog ~ hnw|0|0|statename,
+                  weights = countylevel$households, data = countylevel)
+
+# Compare weighted regressions with and without clustered standard errors.
+stargazer(
+  reg_wgt1, reg_clust1, reg_wgt2, reg_clust2,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  add.lines = list (c("Weighted?", "Yes", "Yes", "Yes", "Yes"),
+                    c("Clustered?", "No", "Yes", "No", "Yes"))
+)
+```
+
+#< award "Clustered standard errors"
+Nice! You clustered the standard errors using the `felm()` function.
+#>
+
+The standard error of $\hat\alpha_1$ increases from 0.019 to 0.042, the standard error of $\hat\beta_1$ from 0.015 to 0.049. If we do not cluster standard errors, we underestimate them significantly.
+
+*This exercise refers to Mian & Sufi (2014), pp. 2207-2208.*
+
+## Exercise 2.3 -- Control variables
+
+Our aim is to measure the causal effect of the housing net worth shock on tradable employment. For this purpose, it is important to distinguish between the concepts of correlation and causality. Two variables are correlated, if they are statistically related. Causality means one variable influences the outcome of the other variable. We use simple linear regression models to measure the linear relationship between an independent variable $(y)$ and a dependent variable $(x)$. If we find a statistically significant regression result, we cannot infer the relationship between $x$ and $y$ is causal. The effect of $x$ on $y$ is causal, if a change in $x$ is the reason for the change in $y$. The difference between correlation and causality is also described in Auermann & Rottman (2015, pp. 108-109; 421).
+
+Here is a cartoon that uses humor to show the danger of confusing correlation and causality.
+
+<img src = "https://imgs.xkcd.com/comics/cell_phones.png">
+
+*Figure 1: Cartoon on the difference between correlation and causality, Source: <a href="https://xkcd.com/925/" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;xkcd.com/925/</a>.*
+
+In exercises 2.1 and 2.2, we discovered that the housing net worth shock and non-tradable employment are significantly positively correlated. However, we cannot conclude that the relationship is causal. One reason why the simple linear regression model might not measure a causal effect is that there are confounders that affect both the housing net worth shock  and non-tradable employment. If we have data for confounders, we can add them to the regression as control variables (see Taddy (2019), p. 104). It is more difficult to adjust for unobserved confounders. Randomized experiments, difference-in-difference analysis, instrumental variable estimation and synthetic controls are techniques which have been developed to help overcome the problem of unobserved confounders (see Taddy (2019), chapters 5 and 6).
+
+### Omitted variable bias 
+
+Omitted variable bias occurs when variables, which are correlated with the housing net worth shock and influence non-tradable employment, are not included in regression analysis.  The omitted variables are part of the disturbance term. The housing net worth shock is correlated with the error term and thus endogenous. The consequence is that OLS estimates are biased and inconsistent. We systematically over- or underestimate the causal effect of a decline in housing net worth on non-tradable employment. For detailed information, see Stock & Watson (2019, pp. 211-214) and Kennedy (2008, pp. 138-140).
+
+#< info "Exogneous and endogenous variables"
+An explanatory variable is exogenous if it is not correlated with the error term. This means $cor(hnw_i, \varepsilon_i) = 0$. If an explanatory variable is correlated with the error term, it is endogenous, $cor(hnw_i, \varepsilon_i) \neq 0$ (cf. Stock & Watson (2019), p. 428; Wooldridge (2020), pp. 800-801). There are several reasons why endogeneity occurs. See Kennedy ((2008), pp. 139-140) for some examples. If an explanatory variable is endogenous, the OLS estimator will be biased and inconsistent. 
+#>
+
+Consider the following simple linear regression model:
+
+$$ ntremp\_rwt_i = \alpha_0 + \alpha_1 \cdot hnw_i + \varepsilon_i, $$
+
+where standard errors are clustered at state level. In this section, we use only the definition that classifies restaurants and the retail sector as non-tradable. In addition, we do not weight regressions. 
+
+<p>
+
+**Task**: Reload `countylevel.Rds`. Regress `ntremp_rwt` on `hnw`, cluster standard errors by `statename` and store the result in `reg_short`. Display regression results using the `stargazer()` function. Press the `edit` button and fill in the missing parts of the code.
+
+```{r "2.3 1", results='asis'}
+#< task
+# Reload countylevel.Rds.
+countylevel = readRDS("countylevel.Rds")
+#>
+#< fill_in
+
+# Estimate the short regression model. 
+reg_short = ___(___ ~ ___|0|0|___, data = ___)
+
+# Show regression results. 
+stargazer(
+  ___,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE
+)
+#>
+
+# Estimate the short regression model. 
+reg_short = felm(ntremp_rwt ~ hnw|0|0|statename, data = countylevel)
+
+# Show regression results. 
+stargazer(
+  reg_short,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE
+)
+```
+
+</p>
+
+The value of $\hat{\alpha_1}$ is 0.252. The causal interpretation is that if housing net worth decreases by one percentage point, non-tradable employment falls by approximately 0.252 percentage points. 
+
+One of Mian and Sufi’s concerns, regarding the short model, is that supply-side industry-specific shocks influence both housing net worth and non-tradable employment. The sectors were affected to different degrees by the recession between 2007 and 2009. If a county was heavily dependent on industries which were hit strongly by the recession it might have experienced both a larger decline in housing net worth and non-tradable employment. Mian and Sufi try to mitigate this problem by considering how important industries are for counties. For each of the 23 two-digit NAICS industries, they add one control variable. The variables represent an industry’s share of  total employment in a given county in 2006. In the next section, we will add 23 control variables to the regression model. To illustrate the effect of omitted variable bias, we include only the control variable `empshare15` in the regression analysis. The variable `empshare15` describes the share of the real estate, rental and leasing sector of total employment in a county in 2006. We display values for the variable `empshare15` for a few counties.
+
+**Task**: The code is already given. Just press the `check` button.
+
+```{r "2.3 2"}
+#< task
+cc = select(countylevel, fips, hnw, households, countyname, statename,
+            empshare15)
+
+head(cc)
+#>
+```
+
+In Autauga County, for example, 1.9% of the employees worked in the real estate, rental and leasing sector in 2006. In Baldwin County, the percentage of employees who worked in that sector in 2006 is higher, at 3.1%.
+
+We assume that the true model, which measures the causal effect of the housing net worth shock on non-tradable employment, is given by:
+
+$$ ntremp\_rwt_i = \alpha_0 + \alpha_1 \cdot hnw_i + \alpha_2 \cdot empshare15_i + \varepsilon_i. $$
+
+In the short regression model, `empshare15` is part of the error term:
+
+$$ \varepsilon_i = \alpha_2 \cdot empshare15_i + \nu_i. $$ 
+
+The omitted variable bias that occurs because we measure the short regression model instead of the long regression model is:
+
+$$ Bias(\tilde{\alpha_1}) = \mathbb{E}(\tilde{\alpha_1}) - \alpha_1 = \alpha_2 \cdot Cor(hnw,empshare15) \cdot \frac{ sd(empshare15)}{sd(hnw)}.$$
+- $\tilde{\alpha_0}$ and $\tilde{\alpha_1}$ are estimators of the short regression model. 
+- $\hat{\alpha_0}$, $\hat{\alpha_1}$ and $\hat{\alpha_2}$ are estimators of the long regression model.
+
+(see Wooldridge (2020), pp. 85; 699)
+
+If variables `hnw` and `empshare15` are correlated and $\alpha_2 \neq 0$, we obtain a biased estimator for $\tilde{\alpha_1}$. We overestimate the causal effect of the housing net worth shock on non-tradable employment if $Bias(\tilde{\alpha_1}) > 0$. $\tilde{\alpha_1}$ has an upward bias. If $Bias(\tilde{\alpha_1}) < 0$, $\tilde{\alpha_1}$ has a downward bias. We underestimate the causal relationship (cf. Wooldridge (2020), p. 86). 
+
+<p>
+
+#< quiz "Bias formula"
+
+question: Consider a case in which the housing net worth shock and the share of the real estate, rental and leasing sector in employment in a county are negatively correlated and $\alpha_2$ is positive. Do we tend to underestimate or overestimate the causal relationship between the housing net worth shock and non-tradable employment?
+sc:
+    - We tend to underestimate the causal relationship.*
+    - We tend to overestimate the causal relationship.
+success: Great, your answer is correct! 
+failure: Your answer is not correct. Please try again.
+
+#>
+
+</p>
+
+Now we will estimate the long regression model and compare it with the short regression model. 
+
+<p>
+
+**Task**: Regress `ntremp_rwt` on `hnw` and `empshare15` using the `felm()` function. Cluster standard errors by `statename` and store the result in `reg_long`. Compare regression results of the short and the long regression using the `stargazer()` function. Fill in the missing parts of the code.
+
+```{r "2.3 3", results='asis'}
+#< fill_in
+# Estimate the long regression model. 
+reg_long = ___(___ ~ ___ + ___|0|0|___, data = ___)
+
+# Compare the short and the long regression model. 
+stargazer(
+  ___, ___,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  column.labels = c("Short model", "Long model")
+)
+#>
+# Estimate the long regression model. 
+reg_long = felm(ntremp_rwt ~ hnw + empshare15|0|0|statename, data = countylevel)
+
+# Compare the short and the long regression model. 
+stargazer(
+  reg_short, reg_long,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  column.labels = c("Short model", "Long model")
+)
+
+```
+
+</p>
+
+If we add the share of the real estate, rental and leasing sector in employment in a county as a control variable to the regression model, the coefficient on the housing net worth shock decreases from 0.252 to 0.246.
+
+For the illustration of the bias formula, we can estimate the bias for our sample: 
+$$ \widehat{Bias(\tilde{\alpha_1})} = \hat\alpha_2 \cdot \widehat{Cor(hnw,empshare15)}\cdot \frac{\widehat{sd(empshare15)}}{\widehat{sd(hnw)}}. $$
+
+**Task**: The code with which to compute the components of the bias formula is given. Calculate the estimated bias of $\tilde{\alpha_1}$ with the variables `alpha2_hat`, `cor_hnw_empshare15`, `sd_empshare15` and `sd_hnw`. 
+
+```{r "2.3 4"}
+#< task
+# Include only counties where variables hnw and empshare15 are given. 
+cl =  countylevel%>%
+  filter(!is.na(hnw), !is.na(empshare15))
+
+# Store alpha_2 from the long regression model in alpha2_hat.
+alpha2_hat = coef(reg_long)[[3]]
+
+# Compute the correlation between hnw and empshare15.
+cor_hnw_empshare15 = cor(cl$hnw, cl$empshare15)
+
+# Calculate the standard deviation of empshare15. 
+sd_empshare15 = sd(cl$empshare15)
+
+# Calculate the standard deviation of hnw.
+sd_hnw = sd(cl$hnw)
+#>
+#< fill_in
+
+# Compute the estimated bias.
+bias = ___
+
+#>
+
+# Compute the estimated bias.
+bias = alpha2_hat * cor_hnw_empshare15 * sd_empshare15 / sd_hnw
+
+#< task
+alpha2_hat
+cor_hnw_empshare15
+sd_empshare15
+sd_hnw
+bias
+#>
+```
+
+The estimated bias is 0.0056. This is the difference between the estimator for $\alpha_1$ from the short and long regression analyses. If we estimate the short rather than the long regression model, we slightly overestimate the effect of the housing net worth shock on non-tradable employment.
+
+### Multiple regression model
+
+Now we add 23 industry controls to the regression model. Each control variable represents the share of a two-digit NAICS industry in employment in a county in 2006. In the info box, you will find a list of all 23 two-digit NAICS industries. We use both definitions of non-tradable employment and weight regressions by the number of households in a county. 
+
+#< info "Industry controls"
+Two-digit NAICS codes refer to sectors. The North American Classification System (NAICS) comprises 20 sectors. The manufacturing, retail trade and transportation and warehousing sectors are represented by several two-digit NAICS codes. We do not include the public administration sector in the analysis, as it is not included in the County Business Patterns (CBP) data set.  The list indicates to which sector each of the 23 control variables belong. 
+
+**empshare1:** Agriculture, Forestry, Fishing and Hunting  
+**empshare2:** Mining, Quarrying, and Oil and Gas Extraction  
+**empshare3:** Utilities  
+**empshare4:** Construction  
+**empshare5:** Manufacturing  
+**empshare6:**  Manufacturing  
+**empshare7:** Manufacturing  
+**empshare8:** 	Wholesale Trade  
+**empshare9:** Retail Trade  
+**empshare10:** Retail Trade  
+**empshare11:** Transportation and Warehousing  
+**empshare12:** Transportation and Warehousing  
+**empshare13:** Information  
+**empshare14:**	Finance and Insurance  
+**empshare15:** Real Estate and Rental and Leasing  
+**empshare16:** Professional, Scientific, and Technical Services  
+**empshare17:** Management of Companies and Enterprises  
+**empshare18:** Administrative and Support and Waste Management and Remediation Services  
+**empshare19:** Educational Services  
+**empshare20:** Health Care and Social Assistance  
+**empshare21:** Arts, Entertainment, and Recreation  
+**empshare22:** Accommodation and Food Services  
+**empshare23:** Other Services
+
+For more information on two-digit NAICS codes, visit <a href="https://www.census.gov/programs-surveys/economic-census/guidance/understanding-naics.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;&#x77;&#x77;&#x77;&#x2E;census.gov/programs-surveys/economic-census/guidance/understanding-naics.html</a>.
+#>
+
+**Task**: Run multiple regressions with 23 industry controls. Estimate the short regression model once again using both definitions of non-tradable employment. Summarize the regression results in a table. The code is already given. Just press the `check` button. 
+
+```{r "2.3 5", results='asis'}
+#< task
+# Load the gluefomula package.
+library(glueformula)
+
+# Create a variable that contains the industry control variables. 
+industrycontrols = c("empshare1", "empshare2", "empshare3", "empshare4",
+                     "empshare5", "empshare6", "empshare7", "empshare8",
+                     "empshare9", "empshare10", "empshare11", "empshare12",
+                     "empshare13", "empshare14", "empshare15", "empshare16",
+                     "empshare17", "empshare18", "empshare19", "empshare20",
+                     "empshare21", "empshare22", "empshare23") 
+
+# Perform multiple regressions with 23 control variables. 
+form1 = gf(ntremp_rwt ~ hnw + {industrycontrols}|0|0|statename)
+reg_multiple1 = felm(form1,
+                     weights = countylevel$households, data = countylevel)
+
+form2 = gf(ntremp_geog ~ hnw + {industrycontrols}|0|0|statename)
+reg_multiple2 = felm(form2,
+                     weights = countylevel$households, data = countylevel)
+
+# Run simple regressions. 
+reg_simple1 = felm(ntremp_rwt ~ hnw|0|0|statename,
+                   weights = countylevel$households, data = countylevel)
+
+reg_simple2 = felm(ntremp_geog ~ hnw|0|0|statename,
+                   weights = countylevel$households, data = countylevel)
+
+# Compare simple and multiple regressions.
+stargazer(
+  reg_simple1, reg_multiple1, reg_simple2, reg_multiple2,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  keep = c("hnw","Constant"),
+  add.lines = list (c("Industry controls?",
+                      "No", "Yes", "No", "Yes"))
+)
+#>
+```
+
+When we estimate multiple regressions instead of simple regressions, the effect of the housing net worth shock decreases slightly. It decreases from 0.190 to 0.174, if we define restaurants and the retail sector as non-tradable, and it declines from 0.199 to 0.166, if we use the definition based on geographical concentration. Both coefficients on the housing net worth shock remain significant at the 1% level.
+
+#< award "Control variables"
+Great! You added control variables to the regression model to solve possible endogeneity problems. In the next exercise, you will learn instrumental variable estimation. This is another way to deal with endogeneity.
+#>
+
+*This exercise refers to Mian & Sufi (2014), pp. 2207-2208.*
+
+## Exercise 3 -- Robustness checks
+
+Mian and Sufi believe that by including 23 industry controls in the regression model, they may not have included all confounding factors. The construction sector was hit particularly hard by the 2007-2009 recession. The authors are concerned that counties that were heavily involved in the construction sector may have experienced significant declines in housing net worth and non-tradable employment. If this possible relationship is not fully captured by the control variable `empshare4`, the construction sector's share of a county's employment in 2006, we may overestimate the causal relationship between the housing net worth shock and non-tradable employment. In exercise 3.1 we will use instrumental variable estimation to solve possible endogeneity problems. In exercise 3.2 we will perform further robustness checks. 
+
+### 3.1 Instrumental variable estimation
+
+Instrumental variable estimation uses instruments to isolate the variation in the endogenous variable, which is uncorrelated with the error term. This allows us to consistently estimate regression parameters. We consider the following linear regression model: 
+
+$$y_i = \beta_0 + \beta_1 x_{i1}+ \beta_2 x_{i2}+\ldots + \beta_k x_{ik} + \varepsilon_i, \; \; i \in \{1, \dots ,n\}.$$
+
+$y$ is the independent variable, $x_1, \dots, x_k$ are the dependent variables and $\varepsilon$ is the error term. We assume that $x_1$ is endogenous and all other explanatory variables are exogenous. To use instrumental variable estimation, we must find at least one instrument for $x_1$. An instrument $z$ is an additional independent variable that satisfies the following two conditions:
+
+- 1. Instrument relevance: $z$ is correlated with the endogenous variable $x_1$, $cor(z_i, x_{i1}) \neq 0 \; \forall i$.
+- 2. Instrument exogeneity: $z$ is not correlated with the error term, $cor(z_i, \varepsilon_{i}) = 0\; \forall i$.
+
+The theory can be found in Stock & Watson (2019, pp. 427-429) and Kennedy (2008, p. 141).
+
+#### Housing supply elasticity as an instrument for the housing net worth shock
+
+We will use the Saiz housing supply elasticity as an instrument for the housing net worth shock. Based on satellite data, Saiz (2010) developed an index to measure how much land is not available for development in metropolitan areas in the United States. He discovered that in regions where the housing supply is considered to be inelastic, building land is severely limited due to geography. Combined with data on regulatory constraints and population, Saiz (2010) estimated housing supply elasticity. Housing supply elasticity describes to what extent the housing supply changes when housing prices change. An elasticity of 0.7 means that when the price in housing increases by 1%, housing supply increases by 0.7%. If housing supply elasticity is less than 1, the supply is inelastic. If housing supply elasticity is greater than 1, the supply is elastic. A housing supply elasticity of 2 means that when housing prices increase by 1%, the housing supply increases by 2%. See Strotebeck (2020, pp. 68-71) for a detailed definition of supply elasticity.
+
+<p>
+
+#< quiz "Housing supply elasticity"
+
+question: Consider Los Angeles County in California and Dallas County in Texas. Which county has the less elastic housing supply?
+sc:
+    - Los Angeles County* 
+    - Dallas County
+success: Great, your answer is correct!
+failure: Your answer is not correct. Please try again.
+
+#>
+
+</p>
+
+We display housing supply elasticity for both counties.
+
+**Task:** The code is already given. Just press the `edit` and then the `check` buttons. 
+
+```{r "3.1 1"}
+#< task
+countylevel = readRDS("countylevel.Rds")
+
+countylevel%>%
+  filter(countyname %in% c("Los Angeles County", "Dallas County") &
+         statename  %in% c("CA", "TX"))%>%
+  select(fips, countyname, statename, hnw, elasticity, households)
+#>
+```
+
+Los Angeles is a large city on the California coast where land is constrained. Housing supply is inelastic and housing supply elasticity has a value of 0.63. In Dallas, opportunities for urban expansion are far less limited than in Los Angeles. Housing supply in Dallas County is elastic and housing supply elasticity stands at 2.18.
+
+**Instrument relevance**
+
+The instrument relevance condition says that the instrument and the possible endogenous variable are correlated. Housing supply elasticity must be correlated with the housing net worth shock. 
+
+<p>
+
+#< quiz "Relevance"
+
+question: Which relationship do you expect between housing supply elasticity and the housing net worth shock?
+sc:
+    - They are positively correlated.* 
+    - They are negatively correlated. 
+    - They are not correlated.
+success: Great, your answer is correct!
+failure: Your answer is not correct. Please try again.
+
+#>
+
+</p>
+
+We will review whether housing supply elasticity and the housing net worth shock are correlated. As proposed by Wooldridge (2020, pp. 505-506), we regress the possible endogenous variable `hnw` on the instrument `elasticity` and on the control variables `empshare1`, ..., `empshare23`. 
+
+<p>
+
+**Task**: Regress `hnw` on `elasticity` and `empshare1`, ..., `empshare23`. Weight the regression by `households` and cluster standard errors by `statename`. Show regression results using the `stargazer()` function. Press the `edit` button and fill in the missing parts of the code.
+
+```{r "3.1 2", results='asis'}
+#< task
+# Create a variable that contains the industry control variables. 
+industrycontrols = c("empshare1", "empshare2", "empshare3", "empshare4",
+                     "empshare5", "empshare6", "empshare7", "empshare8",
+                     "empshare9", "empshare10", "empshare11", "empshare12",
+                     "empshare13", "empshare14", "empshare15", "empshare16",
+                     "empshare17", "empshare18", "empshare19", "empshare20",
+                     "empshare21", "empshare22", "empshare23")
+
+#>
+#< fill_in
+# Run the regression.
+form_rel = gf(___ ~ ___ + {industrycontrols}|0|0|statename)
+reg_relevance = felm(form_rel,
+                     weights = countylevel$households, data = countylevel)
+
+# Show regression results. 
+stargazer(
+  ___, 
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  keep = c("elasticity","Constant")
+)
+#>
+# Run the regression. 
+form_rel = gf(hnw ~ elasticity + {industrycontrols}|0|0|statename)
+reg_relevance = felm(form_rel,
+                     weights = countylevel$households, data = countylevel)
+
+# Show regression results. 
+stargazer(
+  reg_relevance, 
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  keep = c("elasticity","Constant")
+)
+```
+
+</p>
+
+Housing supply elasticity and the housing net worth shock are positively correlated. The more inelastic housing supply in a county was, the more housing net worth declined between 2006 and 2009. The relevance condition is fulfilled.
+
+**Instrument exogeneity**
+
+Instrument exogeneity means the instrumental variable is not correlated with the error term. We cannot verify this condition because we cannot measure the disturbance. One reason why Mian and Sufi use instrumental variable estimation is the possible correlation between the housing net worth shock and the construction sector. The construction sector must not be correlated with housing supply elasticity, otherwise the exogeneity condition would be violated. To test this, we regress the share of the construction sector in employment in 2007 on housing supply elasticity. 
+
+**Task**: Regress `const_2007` on `elasticity`. Weight the regression by `households` and cluster standard errors by `statename`. Show regression results using the `stargazer()` function. Fill in the missing parts of the code.
+
+```{r "3.1 3", results='asis'}
+#< fill_in
+# Run the regression. 
+reg_exogeneity = felm(___ ~ ___|0|0|statename,
+                      weights = countylevel$households, data = countylevel)
+
+# Show regression results. 
+stargazer(
+  ___, 
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE
+)
+#>
+# Run the regression. 
+reg_exogeneity = felm(const_2007 ~ elasticity|0|0|statename,
+                      weights = countylevel$households, data = countylevel)
+
+# Show regression results. 
+stargazer(
+  reg_exogeneity,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE
+)
+```
+
+<p>
+
+#< quiz "Exogeneity"
+
+question: The correlation between housing supply elasticity and the share of the construction sector in employment in 2007 is insignificant and close to zero. Is this good news or bad news for Mian and Sufi?
+sc:
+   - It is good news.* 
+   - It is bad news.
+success: Great, your answer is correct!
+failure: Your answer is not correct. Please try again.
+
+#>
+
+#< award "Valid instruments"
+Excellent! You analyzed whether housing supply elasticity is a valid instrument for the housing net worth shock. While we can check the relevance condition, it is not possible to verify the exogeneity condition. We showed that housing supply elasticity is not correlated with the construction sector. It might, however, be correlated with other parts of the error term.
+#>
+
+</p>
+
+Mian, Rao, and Sufi (2013) also discovered that housing supply elasticity is not correlated with employment growth in the construction sector between 2002 and 2006. A necessary condition for the exogeneity of the instrument, that housing supply elasticity is not correlated with the construction sector, is satisfied. We cannot prove that the exogeneity condition is fulfilled since we cannot observe the disturbance.
+
+
+#### Instrumental variable estimation with felm()
+
+We will apply the two-stage least squares (2SLS) method to determine instrumental variable estimators. You can find an explanation of two-stage least squares in the info box. To perform 2SLS in R we will use the `felm()` function from `lfe` package.
+
+#< info "Two-stage least squares" 
+
+We estimated the following multiple regression models in exercise 2.3, where we weighted both regressions by the number of households in a county and clustered standard errors at state level:
+
+$$ \begin{eqnarray} 
+ntremp\_rwt_i = \alpha_0 + \alpha_1 \cdot hnw_i + \alpha_2 \cdot empshare1_i + \ldots + \alpha_{24} \cdot empshare23_i + \varepsilon_i \\\
+ntremp\_geog_i = \beta_0 + \beta_1 \cdot hnw_i + \beta_2 \cdot empshare1_i + \ldots + \beta_{24} \cdot empshare23_i+ u_i.
+\end{eqnarray} $$
+
+In the first stage, we regress the variable `hnw` on the instrument `elasticity` and on the control variables `empshare1`, ..., `empshare23`:
+
+$$ hnw_i =  \gamma_0 + \gamma_1 \cdot elasticity_i + \gamma_2 \cdot empshare1_i + \ldots + \gamma_{24} \cdot empshare23_i + \nu_i. $$
+
+Then, we compute the predicted values of this regression:
+
+$$ \hat{hnw_i} =  \hat\gamma_0 + \hat\gamma_1 \cdot elasticity_i + \hat\gamma_2 \cdot empshare1_i + \ldots + \hat\gamma_{24} \cdot empshare23_i. $$
+
+$\hat{hnw}$ represents the variation in the housing net worth shock, which is not correlated with the error term. In the second stage, we replace variable $hnw$ in original regressions with predicted values $\hat{hnw}$ from the first stage:
+
+$$ \begin{eqnarray} 
+ntremp\_rwt_i = \alpha_0 + \alpha_1 \cdot \hat{hnw_i} + \alpha_2 \cdot empshare1_i + \ldots + \alpha_{24} \cdot empshare23_i + \eta_i \\\
+ntremp\_geog_i = \beta_0 + \beta_1 \cdot \hat{hnw_i} + \beta_2 \cdot empshare1_i + \ldots + \beta_{24} \cdot empshare23_i+ z_i.
+\end{eqnarray} $$
+
+Read more about 2SLS in Wooldridge (2020, pp. 509-511) and Stock & Watson (2019, p. 429).
+#>
+
+#< info "Instrumental variable estimation with felm()" 
+The `felm()` function from the `lfe` package allows us to perform instrumental variable estimation. The following command regresses `y` on the endogenous variable `end1`, and on the exogenous variable `x2`. For the endogenous variable `end1` the instruments `z1` and `z2` are used. The third part of the formula must be placed in parentheses.
+
+```{r eval = FALSE}
+felm(y ~ x2|0|(end1 ~ z1 + z2)|clust, weights = dat$wgt, data = dat)
+```
+
+For more information on the `felm()` function check <a href="https://cran.r-project.org/web/packages/lfe/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/lfe/index.html</a>.
+#>
+
+**Task**: Use the `felm()` function to perform instrumental variable estimation with `elasticity` as an instrument for `hnw`. Store the results in `iv1` and `iv2`. Run regressions from exercise 2.3 again and store the results in `ols1` and `ols2`. Compare both regression methods in a table. Fill in the missing parts of the code.
+```{r "3.1 4",results='asis'}
+#< fill_in
+# Perform instrumental variable estimation.
+form_iv1 = gf(ntremp_rwt ~ {industrycontrols}|0|(___ ~ ___)|statename)
+iv1 = felm(form_iv1, weights = countylevel$households, data = countylevel)
+
+form_iv2 = gf(ntremp_geog ~ {industrycontrols}|0|(___ ~ ___)|statename)
+iv2 = felm(form_iv2, weights = countylevel$households, data = countylevel)
+#>
+# Perform instrumental variable estimation. 
+form_iv1 = gf(ntremp_rwt ~ {industrycontrols}|0|(hnw ~ elasticity)|statename)
+iv1 = felm(form_iv1, weights = countylevel$households, data = countylevel)
+
+form_iv2 = gf(ntremp_geog ~ {industrycontrols}|0|(hnw ~ elasticity)|statename)
+iv2 = felm(form_iv2, weights = countylevel$households, data = countylevel)
+
+#< task
+# Perform ordinary least squares estimation.
+form_ols1 = gf(ntremp_rwt ~ hnw + {industrycontrols}|0|0|statename)
+ols1 = felm(form_ols1, weights = countylevel$households, data = countylevel)
+
+form_ols2 = gf(ntremp_geog ~ hnw + {industrycontrols}|0|0|statename)
+ols2 = felm(form_ols2, weights = countylevel$households, data = countylevel)
+
+# Compare IV estimation and OLS estimation.
+stargazer(
+  ols1, iv1,  ols2, iv2,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  keep = c("hnw","Constant"),
+  add.lines = list (c("Specification", "OLS", "IV", "OLS", "IV"))
+)
+#>
+```
+
+The IV estimators are larger than the OLS estimators at 0.374 and 0.208. The results are robust to construction sector concerns.
+
+#< award "Instrumental variable estimation"
+Great! You now know how instrumental variable estimation works and how to run it using the `felm()` function. If you can find valid instruments for endogenous variables, instrumental variable estimation is a good way to solve possible endogeneity problems.
+#>
+
+### 3.2 Further robustness checks
+
+#### Demographic controls
+
+In exercise 3.1, we used housing supply elasticity as an instrument for the housing net worth shock. We made certain that housing supply elasticity is not correlated with the construction sector. Mian and Sufi believe that the elasticity of housing supply might be correlated with demographic factors. Therefore, they add 8 control variables which describe the demographic situation in a county. For a list of demographic control variables, see the info box.
+
+#< info "Demographic control variables"
+**white**: Percentage of white people  
+**medhhinc**: Median household income  
+**owner**: Percentage of owner-occupied properties  
+**educ_lths**: Percentage with less than high school diploma  
+**educ_hs**: Percentage with only a high school diploma  
+**unemp**: Unemployment rate  
+**pov**: Poverty rate  
+**urban**: Percentage of urban areas
+#>
+
+<p>
+
+**Task**: Perform instrumental variable estimation with demographic control variables. The code is already given. Just press the `check` button.
+
+```{r "3.2 1",results='asis'}
+#< task
+# Perform IV estimation with demographic controls. 
+form_iv_controls1 = gf(ntremp_rwt ~ white + medhhinc + owner + educ_lths +
+                       educ_hs + unemp + pov + urban +
+                       {industrycontrols}|0|(hnw ~ elasticity)|statename)
+iv_controls1 = felm(form_iv_controls1,
+                    weights = countylevel$households, data = countylevel)
+
+form_iv_controls2 = gf(ntremp_geog ~ white + medhhinc + owner + educ_lths +
+                       educ_hs + unemp + pov + urban +
+                       {industrycontrols}|0|(hnw ~ elasticity)|statename)
+iv_controls2 = felm(form_iv_controls2,
+                    weights = countylevel$households, data = countylevel)
+
+# Compare results of IV estimation with demographic controls
+# with IV estimation without demographic controls and OLS estimation. 
+stargazer(
+  ols1, iv1, iv_controls1, ols2, iv2, iv_controls2, 
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  keep = c("hnw","Constant"),
+  add.lines = list (c("Specification",
+                      "OLS", "IV", "IV", "OLS", "IV", "IV"),
+                    c("Demographic controls?",
+                      "No", "No", "Yes", "No", "No", "Yes"))
+)
+#>
+```
+
+</p>
+
+The coefficients of IV estimation with demographic controls are larger than the coefficients of IV estimation without demographic controls and OLS estimation. The results are robust, when we add demographic control variables to IV estimation.
+
+#### Alternative test for construction sector concerns
+
+Mian and Sufi perform another check regarding construction sector concerns. They add an interaction term which is the product of the housing net worth shock and the share of employment in the construction sector in 2007. The coefficient on the housing net worth shock now measures the effect of the change in housing net worth on non-tradable employment when the construction sector is excluded. Read more about interactions among independent variables in Stock & Watson (2019, pp. 298-300).
+
+<p>
+
+**Task:** The code is already given. Just press the `check` button. 
+
+```{r "3.2 2",results='asis'}
+#< task 
+form_ols3 = gf(ntremp_rwt ~ hnw + const_2007 + hnw:const_2007 +
+               {industrycontrols}|0|0|statename)
+ols3 = felm(form_ols3,
+            weights = countylevel$households, data = countylevel)
+
+form_ols4 = gf(ntremp_geog ~ hnw + const_2007 + hnw:const_2007 +
+               {industrycontrols}|0|0|statename)
+ols4 = felm(form_ols4,
+            weights = countylevel$households, data = countylevel)
+
+stargazer(
+  ols3, ols4,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  keep = c("Constant", "hnw", "const_2007")
+)
+#>
+```
+
+</p>
+
+The OLS estimation predicts a significantly positive relationship between the housing net worth shock and non-tradable employment for counties which are not engaged in the construction sector. This test also shows that the results are robust against construction sector concerns. 
+
+*This exercise refers to Mian & Sufi (2014), pp. 2208-2209.*
+
+## Exercise 4 -- Business uncertainty hypothesis
+
+In this exercise, we look at whether the business uncertainty hypothesis could be the reason why the housing net worth shock impacts non-tradable employment. A central argument of the business uncertainty hypothesis is that uncertainty causes firms to reduce investment, cut back on production, and lay off employees (see Baker, Bloom, and Davis (2016), p. 1593; Bloom (2009), p. 623). In exercises 2 and 3, we learned that the housing net worth shock and non-tradable employment are positively correlated. If the business uncertainty hypothesis explained this effect, counties where the housing net worth shock was large should also have experienced high levels of business uncertainty. 
+
+<img src="business_uncertainty_hypothesis.png" width="400" height="340"/>
+
+*Figure 2: Business uncertainty hypothesis, Source: own diagram.*  
+*Note.* The left side of the figure illustrates Mian and Sufi's main idea that the decline in housing net worth between 2006 and 2009 led to the decline in non-tradable employment between 2007 and 2009. The right side of the figure presents the hypothesis that business uncertainty is the reason for the positive correlation between the change in housing net worth and the change in non-tradable employment. 
+
+Mian and Sufi distinguish between different types of uncertainties to which companies can be exposed. Uncertainties due to a drop in sales are already considered in the analysis. Mian, Rao, and Sufi (2013) concluded that a local decline in housing net worth led to a decline in spending in that region. A local decline in demand could have impacted regional non-tradable employment, as non-tradable employment depends mainly on local demand.  In the next exercise, we will assess whether a decline in credit supply could be the reason for the positive correlation between the housing net worth shock and non-tradable employment. To ascertain whether business uncertainty could be an explanation for the results of exercises 2 and 3, we will consider uncertainty with regard to state government policies.
+
+Mian and Sufi test the business uncertainty hypothesis using quarterly state-level survey data from the National Federation of Independent Businesses (NFIB). The NFIB asked small businesses “What is the single most important problem facing your business today?” Survey participants could choose between the following answers: 1. Taxes, 2. Inflation, 3. Poor sales, 4. Financing and interest rates, 5. Cost of labor, 6. Government requirements and red tape, 7. Competition from large businesses, 8. Quality of labor, 9. Costs/Availability of insurance, and 10. Other. We combine the answers "taxes" and "government requirements and red tape" into one category, which reflects uncertainties as a result of government policy. 
+
+We explore how the decline in employment is related to business uncertainty. For this purpose, we analyze how the percentage share of responses "poor sales", "financing and interest rates", "taxes" and "government requirements and red tape" changed between 2002 and 2012. We also examine how the employment to population ration changed during this period. 
+
+**Task:** The code is already given. Just press the `edit` and then the `check` buttons.
+
+```{r "4 1"}
+#< task
+# Load data set bc. 
+bc = readRDS("bc.Rds")
+
+# Load the zoo package.
+library(zoo)
+
+# Plot business concerns and employment between 2002 and 2012. 
+ggplot(subset(bc, bc$quarter < "2012 Q2"))+
+  geom_line(aes(x = quarter, y = poorsales, colour = "Poor sales"),
+            linetype ="dashed", size = 1)+
+  geom_line(aes(x = quarter, y = govtax, colour = "Regulation and taxes"),
+            linetype ="longdash", size = 1)+
+  geom_line(aes(x = quarter, y = financing,
+                colour = "Financing and interest rates"),
+            linetype ="dotted", size = 1)+
+  geom_line(aes(x = quarter, y = (emppop-58)/15,
+                colour = "Employment to population"),
+            linetype = "solid", size = 1 )+
+  guides(colour = guide_legend(title = NULL))+
+  scale_colour_manual(values = c("Black", "ForestGreen", "SteelBlue", "IndianRed"))+
+  scale_x_yearqtr(format = "%Yq%q")+
+  scale_y_continuous("Fraction stating concern",
+                     sec.axis = sec_axis(~.*15+58,
+                                         name = "Employment to population ratio"))+
+  theme_classic()+
+  theme(
+    legend.direction = "vertical",
+    legend.position = "bottom",
+    axis.title.x = element_blank()
+  )
+#>
+
+```
+
+<p>
+
+#< quiz "Business uncertainty hypothesis 1"
+question: View the graph. Is it likely that the business uncertainty hypothesis explains the effect of the housing net worth shock and non-tradable employment? 
+sc:
+    - Yes, it is likely.
+    - No, it is not likely.*
+success: Great, your answer is correct!
+failure: Your answer is not correct. Try again.
+
+#>
+
+<p/>
+
+The percentage of companies reporting "poor sales" as their most important problem rose sharply during the recession.  In 2006, around 10% of survey participants stated that they were deeply concerned about sales. The share rose from the second half of 2007 to 33% at the end of 2009. The increased concern over poor sales during the recession is consistent with the hypothesis that the decline in housing net worth reduced demand. The percentage of companies that consider "financing and interest rates" as their main problem increased only slightly during the recession and remained at a low level of around 4.5% in 2009. To test the business uncertainty hypothesis, we consider how concerns about regulation and taxes changed during the financial crisis. The number of companies which identify "regulation and taxes" as their main problem, increased in the fourth quarter of 2008. This is significantly later than the decline in employment, which started in 2007. The result does not support the hypothesis that business uncertainty explains the positive correlation between the housing net worth shock and non-tradable employment. In the next step, we analyze the relationship between the housing net worth shock and business uncertainty. We plot the change in businesses citing "regulation and taxes" as the primary concern between 2006 and 2009 against the change in housing net worth between 2006 and 2009.
+
+<p>
+
+#< quiz "Business uncertainty hypothesis 2"
+question: Suppose that business uncertainty explains the positive correlation between the housing net worth shock and non-tradable employment. What relationship would you then expect to see between the change in housing net worth and the change in concerns about taxation and regulation?
+sc:
+    - A positive relationship
+    - A negative relationship*
+success: Great, your answer is correct!
+failure: Your answer is not correct. Try again.
+
+#>
+
+</p>
+
+**Task:** The code is already given. Just press the `check` button.
+
+```{r "4 2"}
+#< task
+# Load data set nfibcs.
+nfibcs = readRDS("nfibcs.Rds")
+
+# Plot the change in business concerns against the change in housing net worth.
+ggplot(nfibcs, aes(x = hnw, y = govtax0609, label = statesh))+
+  geom_point()+
+  geom_text(hjust = 0, nudge_x = 0.002, size = 3)+
+  geom_smooth(method = "lm", se = FALSE, colour = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Change in businesses citing
+       regulation & taxes as top concern, 2006-2009")+
+  coord_cartesian(xlim = c(-0.25, 0.05), ylim = c(-0.2, 0.2))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.1))+
+  theme_classic()
+#>
+```
+
+We can deduce from the graph that there is no negative relationship between the change in housing net worth and the increase in concerns about taxation and regulation at the state level. There is a weak, positive relationship which is, however, insignificant.  The figure indicates that the business uncertainty hypothesis does not explain the results of exercises 2 and 3. 
+
+There is another argument supporting this view. In exercise 6, we will find no significant correlation between the housing net worth shock and tradable employment. If uncertainty regarding government policy were the reason for previous findings, we would expected to see a positive correlation between the housing net worth shock and tradable employment.
+
+*This exercise refers to Mian & Sufi (2014), pp. 2210-2211.*
+
+## Exercise 5 -- Credit supply hypothesis
+
+Another explanation for the correlation between the housing net worth shock and non-tradable employment might be provided by the credit supply hypothesis. Companies in counties with a large decline in housing net worth may have experienced a larger decline in credit supply during the recession and therefore dismissed more employees. For example, when firms used real estate as collateral for loans, firms in counties with large housing net worth declines may have experienced greater difficulty obtaining new loans than firms in counties with small housing net worth declines.
+
+<img src="figure/credit_supply_hypothesis.png" width="400" height="340"/>
+
+*Figure 3: Credit supply hypothesis, Source: own diagram.*  
+*Note.* The left side of the figure shows Mian and Sufi's main idea that the decline in housing net worth between 2006 and 2009 led to the decline in non-tradable employment between 2007 and 2009. The right side of the figure illustrates the hypothesis which asserts that reduced credit supply during the 2007-2009 financial crisis is the reason for the positive correlation between the change in housing net worth and the change in non-tradable employment. 
+
+As Mian and Sufi do not have credit supply data, they conduct two indirect tests of the credit supply hypothesis. They assume that during the 2007-2009 recession, banks restricted lending to small businesses more than to large businesses. To test whether a drop in credit supply could be the reason for the previous results, they examine the relationship between the housing net worth shock and non-tradable employment depending on firm size. The authors use the following six categories: 1-4 employees, 5-9 employees, 10-19 employees, 20-49 employees, 50-99 employees, and more than 100 employees. 
+
+<p>
+
+#< quiz "Credit supply hypothesis 1"
+
+question: If the credit supply hypothesis explained the results of exercises 2 and 3, ...
+sc:
+    - ... we should find a weaker correlation between the housing net worth shock and non-tradable employment among small companies. 
+    - ... we should find a stronger correlation between the housing net worth shock and non-tradable employment among small companies.*
+success: Great, your answer is correct!
+failure: Your answer is not correct. Please try again.
+
+#>
+
+</p>
+
+<p>
+
+**Task**: The code is already given. Just press the `edit` and then `check` buttons.
+
+```{r "5 1", results='asis'}
+#< task
+# Roload countylevel.Rds.
+countylevel = readRDS("countylevel.Rds")
+
+# Run regressions. 
+ols1 = felm(ntremp_rwt_1_4 ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+ols2 = felm(ntremp_rwt_5_9 ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+ols3 = felm(ntremp_rwt_10_19 ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+ols4 = felm(ntremp_rwt_20_49 ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+ols5 = felm(ntremp_rwt_50_99 ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+ols6 = felm(ntremp_rwt_100plus ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+
+# Show results. 
+stargazer(
+  ols1, ols2, ols3, ols4, ols5, ols6,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  dep.var.caption = "Non-tradable employment growth by establishment size (OLS)",
+  dep.var.labels = c("1-4", "5-9", " 10-19", "20-49", "50-99", "100+")
+)
+#>
+```
+
+</p>
+
+The correlation between the housing net worth shock and non-tradable employment is weaker for small companies than for large ones. Regression results do not support the notion that the credit supply hypothesis could explain the effect of the housing net worth shock on non-tradable employment. We repeat the analysis using instrumental variable estimation.
+
+<p>
+
+**Task**: The code is already given. Just press the `check` button.
+
+```{r "5 2", results='asis'}
+#< task
+# Perform instrumental variable estimation. 
+iv1 = felm(ntremp_rwt_1_4 ~ 1|0|(hnw ~ elasticity)|statename,
+           weights = countylevel$households, data = countylevel)
+iv2 = felm(ntremp_rwt_5_9 ~ 1 |0|(hnw ~ elasticity)|statename,
+           weights = countylevel$households, data = countylevel)
+iv3 = felm(ntremp_rwt_10_19 ~ 1|0|(hnw ~ elasticity)|statename,
+           weights = countylevel$households, data = countylevel)
+iv4 = felm(ntremp_rwt_20_49 ~ 1|0|(hnw ~ elasticity)|statename,
+           weights = countylevel$households, data = countylevel)
+iv5 = felm(ntremp_rwt_50_99 ~ 1|0|(hnw ~ elasticity)|statename,
+           weights = countylevel$households, data = countylevel)
+iv6 = felm(ntremp_rwt_100plus ~ 1|0|(hnw ~ elasticity)|statename,
+           weights = countylevel$households, data = countylevel)
+
+# Show results. 
+stargazer(
+  iv1, iv2, iv3, iv4, iv5, iv6,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  dep.var.caption = "Non-tradable employment growth by establishment size (IV)",
+  dep.var.labels = c("1-4", "5-9", " 10-19", "20-49", "50-99", "100+")
+)
+#>
+```
+
+</p>
+
+The instrumental variable estimation yields similar results. The coefficient on the housing net worth shock is higher for large companies than for small ones.
+
+Mian and Sufi conduct another test of the credit supply hypothesis. They suppose that a local housing net worth shock affects local banks more than national banks. In counties served primarily by local banks, a decline in local housing net worth could lead to a sharper decline in credit supply and non-tradable employment than in counties served primarily by national banks.
+
+**Task**: The code is already given. Just press the `check` button.   
+
+```{r "5 3"}
+#< task
+countylevel = countylevel%>%
+  # Include in the calculation only counties where the variable hnw is given.
+  filter(!is.na(hnw))%>%
+  # Calculate the median of variable localshare. 
+  mutate(
+    median = median(localshare, na.rm = TRUE),
+    # Create variables national and local.
+    national = ifelse(localshare < median, 1, 0),
+    local = ifelse(localshare >= median, 1, 0)
+  )
+
+# Select columns countyname, statename, localshare, median, national, local
+# of countylevel data set. Store the result in variable cs.
+cs = select(countylevel, countyname, statename, localshare, median, national,
+            local)
+
+# Show the first six rows of cs.
+head(cs)
+#>
+```
+
+Mian and Sufi  use data from the Federal Deposit Insurance Corporation (FDIC) to identify the share of deposits a bank has in each county. Then, they calculate the average share of deposits across all banks for each county. The variable `localshare` shows the result. If the average proportion of bank deposits in a county is low, this county is classified as a national banking county. If the average proportion of bank deposits in a county is high, this county is categorized as a local banking county. The average percentage of deposits held by banks in Autauga County is 7.5%. This is lower than the median of the variable `localshare`. Therefore, Autauga County is classified as a national banking county. The average percentage of deposits held by banks in Baldwin County is 32.5%. Since this is higher than the median of the variable `localshare`, Baldwin County is categorized as a local banking county.
+
+<p>
+
+#< quiz "Credit supply hypothesis 2"
+
+question: If the credit supply hypothesis explained the results from exercises 2 and 3, there should be a stronger relationship between the decline in housing net worth and the decline in non-tradable employment ...
+sc:
+    - ... in local banking counties.* 
+    - ... in national banking counties.
+success: Great, your answer is correct!
+failure: Your answer is not correct. Please try again.
+
+#>
+
+</p>
+
+**Task**: Regress `ntremp_rwt` on `hnw` for national and local banking counties. Use ordinary least squares estimation for the first two regressions and instrumental variable estimation for the others. Use housing supply elasticity as an instrument for the housing net worth shock in the first stage of instrumental variable estimation. Weight all regressions by `households` and cluster standard errors by `statename`. Fill in the missing parts of the code.
+
+```{r "5 4", results='asis'}
+#< task
+# Perform the first stage of instrumental variable estimation.
+iv7 = felm(hnw ~ elasticity|0|0|statename,
+           weights = countylevel$households, data = countylevel)
+
+countylevel = countylevel%>%
+  mutate(hnw.p = NA)
+countylevel$hnw.p[!is.na(countylevel$elasticity)] <- fitted(iv7)
+
+#>
+#< fill_in
+# Create data sets countylevel.national and countylevel.local.
+countylevel.national = countylevel%>%
+  filter(national == 1)
+countylevel.local = ___
+
+# Perform regressions using ordinary least squares estimation.
+ols8 = felm(___ ~ ___|0|0|___,
+            weights = ___,
+            data = ___)
+ols9 = felm(___ ~ ___|0|0|___,
+            weights = ___,
+            data = ___)
+
+# Perform the second stage of instrumental variable estimation.
+# Use hnw.p instead of hnw as the independent variable. 
+iv8 = felm(___ ~ ___|0|0|___,
+           weights = ___,
+           data = ___)
+iv9 = felm(___ ~ ___|0|0|___,
+           weights = ___,
+           data = ___)
+
+#>
+# Create data sets countylevel.national and countylevel.local.
+countylevel.national = countylevel%>%
+  filter(national == 1)
+countylevel.local = countylevel%>%
+  filter(local == 1)
+
+# Perform regressions using ordinary least squares estimation.
+ols8 = felm(ntremp_rwt ~ hnw|0|0|statename,
+            weights = countylevel.national$households,
+            data = countylevel.national)
+ols9 = felm(ntremp_rwt ~ hnw|0|0|statename,
+            weights = countylevel.local$households,
+            data = countylevel.local)
+
+# Perform the second stage of instrumental variable estimation.
+# Use hnw.p instead of hnw as the independent variable.
+iv8 = felm(ntremp_rwt ~ hnw.p|0|0|statename,
+           weights = countylevel.national$households,
+           data = countylevel.national)
+iv9 = felm(ntremp_rwt ~ hnw.p|0|0|statename,
+           weights = countylevel.local$households,
+           data = countylevel.local)
+
+#< task
+# Show results. 
+stargazer(
+  ols8, ols9, iv8, iv9,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  dep.var.caption = "Non-tradable employment growth by banking type",
+  dep.var.labels.include = FALSE,
+  column.labels = c("National", "Local", "National", "Local"),
+  add.lines = list (c("Specification", "OLS", "OLS", "IV", "IV"))
+)
+#>
+```
+
+#< award "Alternative hypotheses"
+Excellent! In exercises 4 and 5, you explored whether alternative hypotheses could explain the results from previous exercises. We found no evidence that the business uncertainty hypothesis or the credit supply hypothesis are responsible for the positive correlation between the housing net worth shock and non-tradable employment.
+#>
+
+The results are similar for both national and local banking counties. There is a significant, positive relationship between the housing net worth shock and non-tradable employment. The estimated coefficients of the IV estimation are larger than those of OLS estimation. The result of this test also indicates that the credit supply hypothesis does not explain the main findings.
+
+Already the results of exercise 4 suggest that the credit supply hypothesis is not responsible for the relationship between the housing net worth shock and non-tradable employment. In the survey conducted by the National Federation of Independent Businesses, only about 3% of participants reported "financing and interest rates" as their main problem in 2007. The share rose only slightly during the financial crisis to a maximum of around 4.5% in 2009.
+
+Another argument which refutes the credit supply hypothesis here, is that we will not find a significant relationship between the housing net worth shock and tradable employment in exercise 6. If financing difficulties were the reason companies reduced non-tradable employment in counties with a large decline in housing net worth, we would expect to see a positive correlation between the housing net worth shock and tradable employment.
+
+*This exercise refers to Mian & Sufi (2014), pp. 2211-2213.*
+
+## Exercise 6 -- Adjustment mechanisms
+
+In exercises 2 and 3, we explored the impact of a local decline in housing net worth on non-tradable employment. The decline in non-tradable employment is only part of the response of the local labor market to the decline in housing net worth; for the full response, we must also consider the effect on the tradable sector. The consequences of a decline in housing net worth depend on general equilibrium adjustments. If there are flexible prices and no restrictions on the labor market,  wages might fall and employment in the tradable sector could rise, offsetting the decline in employment in the non-tradable sector. In the presence of nominal or real rigidities, adjustment mechanisms are weaker and the impact of a decline in housing net worth lasts longer (see Mian & Sufi (2014), chapter 3 for theory to adjustment mechanisms).
+
+### Housing net worth shock and tradable employment
+
+Mian and Sufi examine, at the county level, how the 2006-2009 decline in housing net worth impacted tradable employment. With flexible prices, a local decline in housing net worth translates into regional job losses in the non-tradable sector, which is compensated for by an increase in employment in the tradable sector. With fixed prices, no adjustment takes place.
+
+<p>
+
+#< quiz "Correlation between the housing net worth shock and tradable employment"
+
+question: Which statement is correct?
+sc:
+    - Counties with greater declines in housing net worth experienced greater increases in tradable employment. 
+    - Counties with greater declines in housing net worth experienced sharper declines in tradable employment.
+    - There is no relationship between the housing net worth shock and tradable employment at the county level.*
+success: Great, your answer is correct!
+failure: Your answer is not correct. Please try again.
+
+#>
+
+</p>
+
+We regress the change in tradable employment between 2007 and 2009 on the decline in housing net worth between 2006 and 2009. One definition categorizes industries with high imports and exports as tradable and the other categorizes geographically concentrated industries as tradable. We run simple regressions and multiple regressions with industry control variables. To compare the relationship between the housing net worth shock and tradable versus non-tradable employment, we run the regressions from exercise 2.3 again. 
+
+<p>
+
+**Task:** The code is already given. Just press the `edit` and then the `check` buttons.
+```{r "6 1", results='asis'}
+#< task
+# Reload countylevel.Rds.
+countylevel = readRDS("countylevel.Rds")
+
+# Create a variable that contains the industry control variables. 
+industrycontrols = c("empshare1", "empshare2", "empshare3", "empshare4",
+                     "empshare5", "empshare6", "empshare7", "empshare8",
+                     "empshare9", "empshare10", "empshare11", "empshare12",
+                     "empshare13", "empshare14", "empshare15", "empshare16",
+                     "empshare17", "empshare18", "empshare19", "empshare20",
+                     "empshare21", "empshare22", "empshare23")
+
+# Run regressions. 
+reg1 = felm(tremp_rwt ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+
+form2 = gf(tremp_rwt ~ hnw + {industrycontrols}|0|0|statename)
+reg2 = felm(form2, weights = countylevel$households, data = countylevel)
+
+reg3 = felm(tremp_geog ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+
+form4 = gf(tremp_geog ~ hnw + {industrycontrols}|0|0|statename)
+reg4 = felm(form4, weights = countylevel$households, data = countylevel)
+
+reg5 = felm(ntremp_rwt ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+
+form6 = gf(ntremp_rwt ~ hnw + {industrycontrols}|0|0|statename)
+reg6 = felm(form6, weights = countylevel$households, data = countylevel)
+
+reg7 = felm(ntremp_geog ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+
+form8 = gf(ntremp_geog ~ hnw + {industrycontrols}|0|0|statename)
+reg8 = felm(form8, weights = countylevel$households, data = countylevel)
+
+# Show results.
+stargazer(
+  reg1, reg2, reg3, reg4, reg5, reg6, reg7, reg8,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  keep = c("hnw","Constant"),
+  add.lines = list (c("Industry controls?",
+                      "No", "Yes", "No", "Yes", "No", "Yes", "No", "Yes"))
+)
+#>
+```
+
+</p>
+
+The estimated correlation between the housing net worth shock and tradable employment is very small and insignificant. The results indicate that the decline in tradable employment in a county was not related to the magnitude of the local decline housing net worth.
+
+Now, we plot the relationship between the housing net worth shock and tradable employment. For a clear presentation we use a subset of the data for the graph. We include counties with more than 50,000 households. We analyze counties with a decrease in housing net worth of less than 30% and an absolute change in tradable employment of less than 60%.
+
+**Task:** The code is already given. Just press the `check` button. 
+
+```{r "6 2", fig.height = 5, fig.width = 10}
+#< task
+# In the first plot, industries with high imports and exports
+# are defined as tradable. 
+p1 = ggplot(subset(countylevel, 
+                   households>50000 & hnw>-0.3 & abs(tremp_rwt)<0.6),
+            aes(x = hnw, y = tremp_rwt))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, colour = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Tradable employment growth, 2007Q1-2009Q1
+        (world trade based)")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-0.6, 0.6))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.2))+
+  theme_classic()
+
+# In the second plot, industries with high geographical concentration
+# are defined as tradable.
+p2 = ggplot(subset(countylevel,
+                   households>50000 & hnw>-0.3 & abs(tremp_geog)<0.6),
+            aes(x = hnw, y = tremp_geog))+ 
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, colour = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Tradable employment growth, 2007Q1-2009Q1
+      (based on high geographical concentration)")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-0.6, 0.6))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.2))+
+  theme_classic()
+
+# Show p1 and p2 side by side
+(p1 | p2)
+#>
+```
+
+In the graph on the left, industries with high imports and exports are defined as tradable. In the graph on the right, industries with high geographical concentration are classified as tradable. Although the classification schemes define different industries as tradable, the graphs appear similar. They show that the decline in non-tradable employment in counties with a large decline in housing net worth, cannot be compensated for by an increase in tradable employment in those counties. 
+
+### Adjustments in wages, migration and labor supply
+
+#### Adjustments in wages
+
+Under flexible wages, it is conceivable that  wages fell in counties with a sharp decline in housing net worth. Mian and Sufi examine, at the county level, the relationship between the change in housing net worth from 2006 to 2009 and the change in wages from 2007 to 2009 are related. They use payroll wage data from the County Business Patterns (CBP) data set and hourly wage data from the American Community Survey (ACS). We present the relationship between the housing net worth shock and wage growth in a graph. We also run regressions with and without industry control variables. 
+
+**Task:** The code is already given. Just press the `check` button. 
+
+```{r "6 3", fig.height = 5, fig.width = 10}
+#< task
+p3 = ggplot(subset(countylevel, households>50000 & hnw>-0.3 & wage_0709>-0.2),
+            aes(x = hnw, y = wage_0709))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, colour = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Wage growth, 2007Q1-2009Q1
+        (CBP)")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-0.2, 0.3))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.1))+
+  theme_classic()
+
+p4 = ggplot(subset(countylevel,households>50000 & hnw>-0.3),
+            aes(x = hnw, y = wagehr_Wmean0709))+ 
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, colour = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Hourly wage growth, 2007-2009
+      (ACS)")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-0.2, 0.3))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.1))+
+  theme_classic()
+
+# Show p3 and p4 side by side
+(p3 | p4)
+#>
+```
+
+The graph on the left plots the payroll wage growth between 2007 and 2009 against the change in housing net worth between 2006 and 2009. The diagram shows that counties with a great decrease in housing net worth experienced a slight decrease in wages. The graph on the right uses hourly wage data from the American Community Survey (ACS). The diagram displays a weak positive relationship between the housing net worth shock and wage development at the county level.
+
+<p>
+
+**Task:** The code is already given. Just press the `check` button. 
+
+```{r "6 4", results='asis'}
+#< task
+# Run regressions. 
+reg9 = felm(wage_0709 ~ hnw|0|0|statename,
+            weights = countylevel$households, data = countylevel)
+
+form10 = gf(wage_0709 ~ hnw + {industrycontrols}|0|0|statename)
+reg10 = felm(form10, weights = countylevel$households, data = countylevel)
+
+reg11 = felm(wagehr_Wmean0709 ~ hnw|0|0|statename,
+             weights = countylevel$households, data = countylevel)
+
+form12 = gf(wagehr_Wmean0709 ~ hnw + {industrycontrols}|0|0|statename)
+reg12 = felm(form12, weights = countylevel$households, data = countylevel)
+ 
+# Show results.
+stargazer(
+  reg9, reg10, reg11, reg12,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  keep = c("hnw","Constant"),
+  add.lines = list (c("Industry controls?",
+                      "No", "Yes", "No", "Yes"))
+)
+#>
+```
+
+</p>
+
+The first two columns show the estimated relationship between the change in housing net worth and payroll wage growth. The coefficient on the housing net worth shock is slightly positive. However, the correlation is only significant when we add industry control variables to the regression. The regression results of other columns indicate that the correlation between the housing net worth shock and hourly wage growth is small and insignificant. Overall, there is little evidence that wages adjust in counties with significant housing net worth declines.
+
+#### Adjustments in migration and labor supply
+
+Mian and Sufi consider migration between counties. People moving from strongly impacted regions to less impacted regions could be an adjustment mechanism. To measure mobility, they use Census data on population growth and data on in-migration from the American Community Survey. We plot the population growth and the in-migration growth from 2007 to 2009 against the change in housing net worth from 2006 to 2009 and perform regressions.
+
+**Task:** The code is already given. Just press the `check` button. 
+
+```{r "6 5", fig.height = 5, fig.width = 10}
+#< task
+p5 = ggplot(subset(countylevel, households>50000 & hnw>-0.3 & pop0709<=0.1),
+            aes(x = hnw, y = pop0709))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, colour = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Population growth, 2007-2009
+        (Census)")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-0.05, 0.1))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.05))+
+  theme_classic()
+
+p6 = ggplot(subset(countylevel, households>50000 & hnw>-0.3),
+            aes(x = hnw, y = movest0709))+ 
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, colour = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("In-migration growth, 2007-2009
+      (ACS)")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-1, 1))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.1))+
+  theme_classic()
+
+# Show p5 and p6 side by side
+(p5 | p6)
+#>
+```
+
+The graph on the left presents the relationship between the change in housing net worth from 2006 to 2009 and the population growth from 2007 to 2009 at the county level. The figure shows that there is a slight positive correlation between the change in housing net worth and population growth. The graph on the right plots the change in in-migration growth from 2007 to 2009 against the change in housing net worth from 2006 to 2009 at the county level. It displays a weak negative relationship between the change in housing net worth and in-migration growth. 
+
+<p>
+
+**Task:** The code is already given. Just press the `check` button. 
+
+```{r "6 6", results='asis'}
+#< task
+# Run regressions. 
+reg13 = felm(pop0709 ~ hnw|0|0|statename,
+             weights = countylevel$households, data = countylevel)
+
+form14 = gf(pop0709 ~ hnw + {industrycontrols}|0|0|statename)
+reg14 = felm(form14, weights = countylevel$households, data = countylevel)
+
+reg15 = felm(movest0709 ~ hnw|0|0|statename,
+             weights = countylevel$households, data = countylevel)
+
+form16 = gf(movest0709 ~ hnw + {industrycontrols}|0|0|statename)
+reg16 = felm(form16, weights = countylevel$households, data = countylevel)
+ 
+
+# Show results.
+stargazer(
+  reg13, reg14, reg15, reg16,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  keep = c("hnw","Constant"),
+  add.lines = list (c("Industry controls?",
+                      "No", "Yes", "No", "Yes"))
+)
+#>
+```
+
+</p>
+
+The regression results indicate that the correlation between the change in housing net worth and population growth is slightly positive. However, the correlation is only significant when we add industry control variables. The relationship between the housing net worth shock and in-migration growth is slightly negative and insignificant.
+
+In this test, we assume that the magnitude of the housing net worth shock in a county affects population growth there. However, when interpreting the regression results, we should keep in mind that population growth can lead to an increase in housing prices. Thus, there could be a reciprocal relationship between the housing net worth shock and population growth, or population growth could affect the level of the housing net worth shock. Therefore, we should be cautious in interpreting the results as causal.
+
+The authors also examine the correlation between the housing net worth shock and labor force growth. Perhaps counties with a small decline in housing net worth experienced a larger increase in labor force than counties with a large decline in housing net worth. We illustrate the relation in a graph and run regressions.
+
+**Task:** The code is already given. Just press the `check` button. 
+
+```{r "6 7"}
+#< task
+p7 = ggplot(subset(countylevel, households>50000 & hnw>-0.3 & abs(lf_0709<0.1)),
+            aes(x = hnw, y = lf_0709))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, colour = "IndianRed")+
+  xlab("Change in housing net worth, 2006-2009")+
+  ylab("Labor force growth, 2007-2009")+
+  coord_cartesian(xlim = c(-0.3, 0.05), ylim = c(-0.05, 0.1))+
+  scale_x_continuous(breaks = breaks_width(0.05))+
+  scale_y_continuous(breaks = breaks_width(0.05))+
+  theme_classic()
+
+p7
+#>
+```
+
+The graph plots the change in labor force growth between 2007 and 2009 against the change in housing net worth between 2006 and 2009. The diagram indicates that there is a very small positive relationship between the housing net worth shock and labor force growth at the county level. 
+
+**Task:** The code is already given. Just press the `check` button. 
+
+```{r "6 8",results='asis'}
+#< task
+reg17 = felm(lf_0709 ~ hnw|0|0|statename,
+             weights = countylevel$households, data = countylevel)
+
+form18 = gf(lf_0709 ~ hnw + {industrycontrols}|0|0|statename)
+reg18 = felm(form18, weights = countylevel$households, data = countylevel)
+
+# Show results.
+stargazer(
+  reg17, reg18,
+  type = "html",
+  digits = 3,
+  omit.stat = "ser",
+  model.numbers = FALSE,
+  keep = c("hnw","Constant"),
+  add.lines = list (c("Industry controls?",
+                      "No", "Yes"))
+)
+#>
+```
+
+The coefficients on the housing net worth shock are very small and insignificant. This demonstrates that there is no significant correlation between the change in housing net worth and labor force growth at the county level. 
+
+<p>
+
+#< award "Adjustment mechanisms"
+Nice! In exercise 6, you examined whether the decrease in non-tradable employment led to adjustment mechanisms in the labor market. We found no evidence that the decline in non-tradable employment was offset by an increase in tradable employment. There is little evidence that wages adjusted and that people moved from strongly impacted counties to less impacted counties.
+#>
+
+</p>
+
+*This exercise refers to Mian & Sufi (2014), pp. 2216-2221.*
+
+## Exercise 7 -- Conclusion
+
+In this problem set, we investigated the role that the decrease in housing net worth between 2006 and 2009 played in the drop in U.S. employment during the 2007-2009 recession. On average, housing net worth in the U.S. declined by 9.5% from 2006 to 2009 and employment declined by 5.3% from 2007 to 2009. Using histograms, we identified that the 2007-2009 recession affected U.S. counties to varying degrees. 
+
+To examine the impact of the housing net worth shock on employment, we distinguished between non-tradable and tradable employment. While non-tradable employment depends mainly on local demand, tradable employment depends on national or global demand.
+
+
+We regressed the change in housing net worth between 2006 and 2009 on the change in non-tradable employment between 2007 and 2009. For both definitions of non-tradable employment, we found a significant positive relationship between the housing net worth shock and non-tradable employment. Counties with larger declines in housing net worth experienced greater reductions in non-tradable employment. The causal interpretation of the regression results is that a 10 percentage point decline in housing net worth leads to a decline in non-tradable employment of approximately 1.90 and 1.99 percentage points, respectively. 
+
+The financial crisis affected industries to varying degrees. To consider how important industries are for a county, we added 23 two-digit NAICS industry control variables to the regression model. Including the control variables in the regression model slightly reduces the estimated effect of the housing net worth shock on non-tradable employment.
+
+We conducted tests to examine the notion that counties which were heavily involved in the construction sector experienced large decreases in housing net worth and non-tradable employment. We ran instrumental variable estimation with housing supply as an instrument for the housing net worth shock. Another test involved adding an interaction term which is the product of the housing net worth shock and the construction sector’s share of employment in 2007. The results of both tests indicate that the results are robust to construction sector concerns.
+
+We investigated whether business uncertainty could be the reason for the positive correlation between the housing net worth shock and non-tradable employment. We found that the decline in employment started earlier than the rise in uncertainty about regulation and taxes. In addition, there is no significant correlation between the housing net worth shock and the increased concern over taxation and regulation at the county level. This implies that the business uncertainty hypothesis does not explain the previous results.
+
+One test we conducted with respect to the credit supply hypothesis was to regress non-tradable employment on the housing net worth shock depending on firm size. If the credit supply hypothesis had explained the results from exercises 2 and 3, we would have expected to see a stronger positive relationship between the housing net worth shock and non-tradable employment among small businesses. The results show the opposite. There is a stronger correlation between the decline in housing net worth and non-tradable employment among large companies. 
+
+We examined whether the decline in employment in the non-tradable sector led to adjustment mechanisms in the labor market. Using regression analyses, we found that the relationship between the housing net worth shock and tradable employment is very small and insignificant. This suggests that the decrease in non-tradable employment is not offset by an increase in tradable employment. Other labor market reactions could be that wages fall in counties with large declines in housing net worth and employees move from severely impacted counties to less impacted counties. We found little evidence for these adaptation mechanisms.
+
+I hope you had fun working on this problem set. You can see a list of all of the awards you have earned by clicking the `edit` and then the `check` buttons. 
+
+```{r "7 1", results='asis'}
+#< task
+awards()
+#>
+```
+
+## Exercise 8 -- References
+
+### Bibliography
+
+Auer, B. & Rottmann, H. (2015): *Statistik und Ökonometrie für Wirtschaftswissenschaftler: Eine anwendungsorientierte Einführung.* 3rd Edition. Wiesbaden: Springer Gabler.
+
+Baker, S. R., Bloom, N. & Davis, S. J. (2016): Measuring Economic Policy Uncertainty. *The Quarterly Journal of Economics, 131 (4)*, pp. 1593–1636.
+
+Bloom, N. (2009): The Impact of Uncertainty Shocks. *Econometrica, 77 (3)*, pp. 623–685.
+
+Kennedy, P. (2008): *A Guide to Econometrics.* 6th Edition. Malden, MA [i.a.]: Blackwell Publishing.
+
+Mian, A., Rao, K. &  Sufi, A. (2013): Household Balance Sheets, Consumption, and the Economic Slump. *The Quarterly Journal of Economics, 128 (4),* pp. 1687–1726.
+
+Mian, A. &  Sufi, A. (2014): What Explains the 2007-2009 Drop in Employment? *Econometrica, 82 (6)*, pp. 2197–2223.
+
+Rhoades, S. A. (1993): The Herfindahl-Hirschman index. *Federal Reserve Bulletin, issue Mar,* pp. 188-189. 
+
+Saiz, A. (2010): The Geographic Determinants of Housing Supply. *The Quarterly Journal of Economics, 125 (3),* pp. 1253–1296.
+
+StataCorp. (2021): *Stata 17 Base Reference Manual.* College Station, TX: Stata Press.
+
+Stock, J.H. & Watson, M.W. (2019): *Introduction to Econometrics.* 4th Edition. Harlow, England [i.a.]: Pearson.
+
+Strotebeck, F. (2020): *Einführung in die Mikroökonomik : Band I: Theoretische Grundlagen.* Wiesbaden: Springer Gabler.
+
+Taddy, M. (2019): *Business Data Science : Combining Machine Learning and Economics to Optimize, Automate, and Accelerate Business Decisions.* New York [i.a.]: McGraw-Hill Education.
+
+United States Census Bureau (2021a): County Business Patterns (CBP). <a href="https://www.census.gov/programs-surveys/cbp/data.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;&#x77;&#x77;&#x77;&#x2E;census.gov/programs-surveys/cbp/data.html</a>. Accessed on 11/02/2021.
+
+United States Census Bureau (2021b): NAICS Codes. <a href="https://www.census.gov/programs-surveys/economic-census/guidance/understanding-naics.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;&#x77;&#x77;&#x77;&#x2E;census.gov/programs-surveys/economic-census/guidance/understanding-naics.html</a>. Accessed on 10/29/2021.
+
+United States Census Bureau (2021c): North American Industry Classification System: Introduction to NAICS. <a href="https://www.census.gov/naics/" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;&#x77;&#x77;&#x77;&#x2E;census.gov/naics/</a>. Accessed on 11/02/2021.
+
+Verbeek, M. (2012): *A Guide to Modern Econometrics.* 4th Edition. Chichester: Wiley.
+
+Wickham, H., Navarro, D. & Pedersen, T. L. (work-in-progress): *ggplot2: Elegant Graphics for Data Analysis*. 3rd Edition. New York: Springer. <a href="https://ggplot2-book.org/preface-3e.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;ggplot2-book.org/preface-3e.html</a>. Accessed on 11/04/2021.
+
+Wooldridge, J. M. (2020): *Introductory Econometrics: A Modern Approach.* 7th Edition. Boston, MA: Cengage.
+
+### R packages
+
+Gaure, S. (2021): *lfe: Linear Group Fixed Effects.* R package version 2.8-7. <a href="https://cran.r-project.org/web/packages/lfe/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/lfe/index.html</a>.
+
+Hlavac, M. (2018): *stargazer: Well-Formatted Regression and Summary Statistics Tables.* R package version 5.2.2. <a href="https://cran.r-project.org/web/packages/stargazer/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/stargazer/</a>.
+
+Kranz, S. (2021a): *glueformula: string interpolation to build regression formulas.* R package version 0.1.0. <a href="https://github.com/skranz/glueformula" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;github.com/skranz/glueformula</a>.
+
+Kranz, S. (2021b): *RTutor: Interactive R Problem Sets.* R package version 2020.11.25. <a href="https://github.com/skranz/RTutor" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;github.com/skranz/Rtutor</a>.
+
+Pedersen, T. L. (2020): *patchwork: The Composer of Plots.* R package version 1.1.1. <a href="https://cran.r-project.org/web/packages/patchwork/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/patchwork/index.html</a>.
+
+Wickham, H., Chang, W., Henry, L., Pedersen, T. L., Takahashi, K., Wilke, C., Woo, K., Yutani, H. & Dunnington, D. (2021): *ggplot2: Create Elegant Data Visualisations Using the Grammar of Graphics.* R package version 3.3.5. <a href="https://cran.r-project.org/web/packages/ggplot2/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/ggplot2/index.html</a>.
+
+Wickham, H., François, R., Henry, L. & Müller, K. (2021): *dplyr: A Grammar of Data Manipulation.* R package version 1.0.7. <a href="https://cran.r-project.org/web/packages/dplyr/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/dplyr/index.html</a>.
+
+Wickham, H. & Seidel, D. (2020): *scales: Scale Functions for Visualization.* R package version 1.1.1. <a href="https://cran.r-project.org/web/packages/scales/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/scales/index.html</a>.
+
+Zeileis, A., Grothendieck, G. & Ryan, J. A. (2021): *zoo: S3 Infrastructure for Regular and Irregular Time Series (Z's Ordered Observations)*. R package version 1.8-9. <a href="https://cran.r-project.org/web/packages/zoo/index.html" target="_blank">&#x68;&#x74;&#x74;&#x70;&#x73;&#x3A;&#x2F;&#x2F;cran.r-project.org/web/packages/zoo/index.html</a>.
+
+
