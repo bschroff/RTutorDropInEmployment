@@ -8,7 +8,7 @@ Author: Birgit Schroff
 ```{r "setup"}
 library(RTutor)
 # Adapt the working directory below and then run setup chunk in RStudio.
-setwd("C:/your/directory/")
+setwd("C:/Users/Birgit/Documents/Uni/Master/Masterarbeit/RTutorDropInEmployment")
 ps.name = "DropInEmployment"; sol.file = paste0(ps.name,"_sol.Rmd")
 # character vector of all packages you load in the problem set
 libs = c("dplyr", "ggplot2","glueformula", "lfe", "patchwork", "scales", "stargazer", "zoo")
@@ -418,7 +418,7 @@ head(il1)
 
 The column `naics` contains the four-digit NAICS code and column `industry` specifies the name of the corresponding industry. The variable `Iemp_2007` represents the number of employees per industry in 2007. The variable `indcat` defines the category  an industry is assigned. Columns `ntr_geog` and `tr_geog` show whether an industry is classified as tradable or non-tradable according to the alternative classification scheme based on geographical concentration. The industry "metal ore mining" has 39,792 employees in 2007 and is categorized as tradable by the retail and world trade classification. The definition based on geographical concentration also classifies this industry as tradable. The industry “nonmetallic mineral mining and quarrying” is classified differently by the classification schemes. According to the retail and world trade definition, it is classified as tradable, while under the geographical classification it is classified as non-tradable.  
 
-Tradable and non-tradable industries shall be sorted by percentage share of total employment. By means of the `dplyr` function `mutate()`, we create the variable `Iemp_2007` which contains for each four-digit NAICS industry the share of total employment in 2007.
+Tradable and non-tradable industries shall be sorted by percentage share of total employment. By means of the `dplyr` function `mutate()`, we create the variable `Iempshare07` which contains for each four-digit NAICS industry the share of total employment in 2007.
 
 **Task:** Fill in the missing parts of the code.
 ```{r "1.2 5"}
@@ -826,7 +826,7 @@ In most counties, total employment declined by up to 20%. In some counties, howe
 
 ## Exercise 2 -- Housing net worth shock and non-tradable employment
 
-Mian and Sufi investigate, at the county level, how the 2006-2009 decline in housing net worth affected employment. Mian, Rao and Sufi (2013) discovered that in counties with a greater decline in housing net worth, consumption dropped sharply. As the decline in spending in one region can impact employment globally, it is complicated to measure the effect of a local decline in housing net worth on employment. The authors solve this problem by estimating the impact of the housing net worth shock on non-tradable employment. The non-tradable sector relies heavily on local demand. In exercise 2.1, we will estimate the relationship between the housing net worth shock and non-tradable employment using simple linear regression models. We will weight regressions and cluster standard errors in exercise 2.2 and in exercise 2.3 we will add control variables to regressions. 
+Mian and Sufi investigate, at the county level, how the 2006-2009 decline in housing net worth affected employment. Mian, Rao and Sufi (2013) discovered that in counties with a greater decline in housing net worth, consumption dropped sharply. As the decline in spending in one region can impact employment globally, it is complicated to measure the effect of a local decline in housing net worth on employment. The authors solve this problem by estimating the impact of the housing net worth shock on non-tradable employment. The non-tradable sector relies heavily on local demand. In exercise 2.1, we will estimate the relationship between the housing net worth shock and non-tradable employment using simple linear regression models. We will weight regressions and cluster standard errors in exercise 2.2 and in exercise 2.3 we will add control variables to the regressions. 
 
 *This exercise refers to Mian & Sufi (2014), p. 2205.*
 
@@ -1863,7 +1863,7 @@ The OLS estimation predicts a significantly positive relationship between the ho
 
 ## Exercise 4 -- Business uncertainty hypothesis
 
-In this exercise, we look at whether the business uncertainty hypothesis could be the reason why the housing net worth shock impacts non-tradable employment. A central argument of the business uncertainty hypothesis is that uncertainty causes firms to reduce investment, cut back on production, and lay off employees (see Baker, Bloom, and Davis (2016), p. 1593; Bloom (2009), p. 623). In exercises 2 and 3, we learned that the housing net worth shock and non-tradable employment are positively correlated. If the business uncertainty hypothesis explained this effect, counties where the housing net worth shock was large should also have experienced high levels of business uncertainty. 
+In this exercise, we look at whether the business uncertainty hypothesis could be the reason why the housing net worth shock impacts non-tradable employment. A central argument of the business uncertainty hypothesis is that uncertainty causes firms to reduce investment, cut back on production, and lay off employees (see Baker, Bloom, and Davis (2016), p. 1593; Bloom (2009), p. 623). In exercises 2 and 3, we learned that the housing net worth shock and non-tradable employment are positively correlated. If the business uncertainty hypothesis explained this effect, counties where the negative housing net worth shock was large should also have experienced high levels of business uncertainty. 
 
 <img src="business_uncertainty_hypothesis.png" width="400" height="340"/>
 
@@ -2199,7 +2199,7 @@ stargazer(
 Excellent! In exercises 4 and 5, you explored whether alternative hypotheses could explain the results from previous exercises. We found no evidence that the business uncertainty hypothesis or the credit supply hypothesis are responsible for the positive correlation between the housing net worth shock and non-tradable employment.
 #>
 
-The results are similar for both national and local banking counties. There is a significant, positive relationship between the housing net worth shock and non-tradable employment. The estimated coefficients of the IV estimation are larger than those of OLS estimation. The result of this test also indicates that the credit supply hypothesis does not explain the main findings.
+OLS estimates are slightly larger for local banking counties than for national banking counties. The IV estimators are similar for both national and local banking counties. There is a significant, positive relationship between the housing net worth shock and non-tradable employment. The estimated coefficients of the IV estimation are larger than those of OLS estimation. The result of this test also indicates that the credit supply hypothesis does not explain the main findings.
 
 Already the results of exercise 4 suggest that the credit supply hypothesis is not responsible for the relationship between the housing net worth shock and non-tradable employment. In the survey conducted by the National Federation of Independent Businesses, only about 3% of participants reported "financing and interest rates" as their main problem in 2007. The share rose only slightly during the financial crisis to a maximum of around 4.5% in 2009.
 
